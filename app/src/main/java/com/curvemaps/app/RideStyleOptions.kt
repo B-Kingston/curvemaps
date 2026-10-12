@@ -164,11 +164,13 @@ internal class RideStyleOptions(
             var resolved = 0
             fun settled(style: RideStyle, option: DistinctRideStyles.Option) {
                 resolved++
-                next.stops.getValue(style).complete(option)
-                onSettled(style, option)
+                // Count the stop before answering it: a caller that has its
+                // stop back must see progress include it.
                 synchronized(lock) {
                     if (plan === next) _progress.value = StyleSearchProgress(planKey, resolved)
                 }
+                next.stops.getValue(style).complete(option)
+                onSettled(style, option)
             }
             val roundTrip = params.roundTrip
             if (roundTrip != null) {
