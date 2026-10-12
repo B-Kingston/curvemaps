@@ -10,7 +10,14 @@ has none of them until the pipeline runs (`graph-pipeline.md` for the graph).
 CI downloads a dated OSM extract (PBF magic verified), builds tiles, imports
 the graph, builds the geocoder index, fetches style assets, then runs
 `tools/test/ci.sh`. Ordinary pushes restore the generated-data cache when the
-key is unchanged, so they do not pick up a newer extract.
+key is unchanged, so they do not pick up a newer extract. The extract also has
+its own cache, keyed by `OSM_EXTRACT_DATE` alone and restored on every run, so
+a pipeline change rebuilds from it without downloading it again.
+
+Pin a first-of-month extract (`YYMM01`). Geofabrik deletes daily files after
+about a week and first-of-month ones after a few months. A pin it has deleted
+fails CI as soon as the extract cache is cold (a new date, or a week without
+CI runs).
 
 Whenever the source data or any pipeline input changes (new extract,
 GraphHopper or Planetiler version, `tools/gh/config.yml`,
@@ -18,8 +25,9 @@ GraphHopper or Planetiler version, `tools/gh/config.yml`,
 `tools/tiles/build-tiles.sh`, geocoder source/format, or a deliberate refresh),
 update `OSM_EXTRACT_DATE` (when changing the extract) and bump `CACHE_SEED` in
 `.github/workflows/ci.yml` in the same commit (`v1` → `v2`). CI cannot see
-changes to ignored `data/` files. A pipeline change also rebuilds every hosted
-package (`regions.md`).
+changes to ignored `data/` files. A pipeline input change also rebuilds every
+hosted package (`regions.md`); a new CI extract alone does not, because the
+service picks its own extracts.
 
 ## Release artifacts
 

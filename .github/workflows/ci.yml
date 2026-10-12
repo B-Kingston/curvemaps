@@ -28,9 +28,11 @@ env:
   # graph format is version-bound). Used for the jar URL and cache path below.
   GRAPHHOPPER_VERSION: "11.0"
   GRAPHHOPPER_JAR_SHA256: b59c024afe172ec6ec85b6327006c3138ec58c7d0bcd26253d0e42853f613def
-  # Geofabrik's `latest` alias currently loops through a cached slash redirect.
-  # Pin the current dated Queensland extract until that alias is healthy again.
-  OSM_EXTRACT_DATE: "260928"
+  # A dated Queensland extract, never `latest`, so the cache keys name exact
+  # bytes. Pin a first-of-month date (YYMM01): Geofabrik deletes daily files
+  # after about a week but keeps first-of-month ones for a few months. The
+  # extract has its own cache, so it downloads again only when this changes.
+  OSM_EXTRACT_DATE: "261001"
   # v3: tools/tiles/build-tiles.sh gained configurable work/output paths and
   # portable SHA-256 verification for the map server's pipeline reuse. The
   # extraction and output bytes are unchanged, but the pinned pipeline input
@@ -41,7 +43,8 @@ env:
   # v6: ride factors. tools/gh/config.yml imports SRTM3 elevation (a 3D graph;
   # tiles are fetched into data/elevation/srtm, cached with data/) and urban
   # density, and MotoGraphImport.java stores per-edge stop controls (moto_stops).
-  CACHE_SEED: v6
+  # v7: the extract moved from 260928 (deleted by Geofabrik) to 261001.
+  CACHE_SEED: v7
 
 jobs:
   light-tier:
@@ -92,6 +95,17 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
 
+      # The extract is cached on its own, keyed by date alone, and restored on
+      # every run to keep it from expiring. A pipeline input change then
+      # rebuilds from it instead of downloading a dated file Geofabrik may
+      # already have deleted.
+      - name: Restore the OSM extract
+        id: osm-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/queensland.osm.pbf
+          key: osm-queensland-${{ env.OSM_EXTRACT_DATE }}
+
       - name: Restore generated data (OSM extract, graph, tiles, geocoder)
         id: data-cache
         uses: actions/cache@v4
@@ -103,10 +117,10 @@ jobs:
             app/src/main/assets/geocoder
           key: offline-${{ runner.os }}-${{ env.CACHE_SEED }}-qld${{ env.OSM_EXTRACT_DATE }}-gh${{ env.GRAPHHOPPER_VERSION }}-${{ hashFiles('tools/gh/config.yml', 'tools/gh/motorcycle.json', 'tools/gh/MotoGraphImport.java', 'tools/tiles/build-tiles.sh', 'geocoder-tool/**') }}
 
-      - name: Download OSM extract and GraphHopper import jar
-        if: steps.data-cache.outputs.cache-hit != 'true'
+      - name: Download the OSM extract
+        if: steps.osm-cache.outputs.cache-hit != 'true' && steps.data-cache.outputs.cache-hit != 'true'
         run: |
-          mkdir -p data tools/gh
+          mkdir -p data
           curl -fL --retry 3 --retry-delay 5 \
             -o data/queensland.osm.pbf \
             "https://download.geofabrik.de/australia-oceania/australia/queensland-${OSM_EXTRACT_DATE}.osm.pbf"
@@ -126,6 +140,19 @@ jobs:
           assert b'OSMHeader' in blob_header, blob_header[:80]
           print('queensland.osm.pbf has a valid OSMHeader blob')
           PY
+
+      # Saved now, not at the end of the job, so a later failure keeps it.
+      - name: Save the OSM extract
+        if: steps.osm-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/queensland.osm.pbf
+          key: osm-queensland-${{ env.OSM_EXTRACT_DATE }}
+
+      - name: Download the GraphHopper import jar
+        if: steps.data-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p tools/gh
           curl -fL --retry 3 --retry-delay 5 \
             -o tools/gh/graphhopper-web-${{ env.GRAPHHOPPER_VERSION }}.jar \
             https://github.com/graphhopper/graphhopper/releases/download/${{ env.GRAPHHOPPER_VERSION }}/graphhopper-web-${{ env.GRAPHHOPPER_VERSION }}.jar

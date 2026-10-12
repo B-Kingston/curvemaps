@@ -12,7 +12,7 @@ on first use and loads via MMAP; map-less builds load it from an installed
    from there). Geofabrik serves region extracts three levels deep
    (`/australia-oceania/australia/queensland-YYMMDD.osm.pbf`); shallower paths
    return an HTML index with HTTP 200, so verify the bytes are a PBF. CI pins
-   `OSM_EXTRACT_DATE` because the `latest` alias loops through a cached redirect.
+   a first-of-month `OSM_EXTRACT_DATE` (`map-assets.md`).
 2. Import (JDK 17, ~1 min for a state, plus ~8 min the first time for SRTM tiles):
    ```sh
    JAVA_HOME=/opt/homebrew/opt/openjdk@17

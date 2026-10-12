@@ -101,8 +101,8 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew :app:connectedDebugAndroidTest 
   `tools/gh/motorcycle.json`, `tools/gh/MotoGraphImport.java`,
   `tools/tiles/build-tiles.sh`, geocoder source/format) bumps `CACHE_SEED` (and
   `OSM_EXTRACT_DATE` for a new extract) in `.github/workflows/ci.yml` in the
-  same commit. It also rebuilds every hosted package, so don't change inputs
-  casually (`regions.md`).
+  same commit. A pipeline input change also rebuilds every hosted package, so
+  don't change inputs casually (`regions.md`); a new CI extract alone does not.
 
 ## Commit as you go
 
