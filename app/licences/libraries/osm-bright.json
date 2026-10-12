@@ -1,0 +1,19 @@
+{
+  "uniqueId": "curvemaps.data:osm-bright-sprites",
+  "name": "OSM Bright map icons",
+  "description": "Point-of-interest icons (sprites) on the map, from the OSM Bright style. © MapTiler.com & OpenMapTiles contributors, © Mapbox. Design under CC BY 4.0.",
+  "website": "https://github.com/openmaptiles/osm-bright-gl-style",
+  "developers": [
+    {
+      "name": "MapTiler.com & OpenMapTiles contributors"
+    },
+    {
+      "name": "Mapbox"
+    }
+  ],
+  "licenses": [
+    "CC-BY-4.0",
+    "BSD-3-Clause"
+  ],
+  "tag": "data"
+}

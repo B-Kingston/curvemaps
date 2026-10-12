@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A planner's route export: five stops, no road geometry (Furkot style).
+     CurveMaps routes between the stops in the rider's style. -->
+<gpx version="1.1" creator="CurveMaps fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>Nambour hinterland stops</name></metadata>
+  <rte>
+    <name>Nambour hinterland stops</name>
+    <rtept lat="-26.625491" lon="152.958018"><name>Nambour</name></rtept>
+    <rtept lat="-26.954705" lon="152.777724"><name>Woodford</name></rtept>
+    <rtept lat="-27.195919" lon="152.824545"><name>Dayboro</name></rtept>
+    <rtept lat="-27.039270" lon="152.860723"><name>Wamuran</name></rtept>
+    <rtept lat="-26.625618" lon="152.958156"><name>Nambour</name></rtept>
+  </rte>
+</gpx>

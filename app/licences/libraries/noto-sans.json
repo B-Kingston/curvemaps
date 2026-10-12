@@ -1,0 +1,15 @@
+{
+  "uniqueId": "curvemaps.data:noto-sans",
+  "name": "Noto Sans (map label glyphs)",
+  "description": "Regular, Bold and Italic glyphs for map labels. © Google LLC and the Noto project authors. Under the SIL Open Font License 1.1.",
+  "website": "https://notofonts.github.io",
+  "developers": [
+    {
+      "name": "The Noto Project Authors"
+    }
+  ],
+  "licenses": [
+    "OFL-1.1"
+  ],
+  "tag": "data"
+}

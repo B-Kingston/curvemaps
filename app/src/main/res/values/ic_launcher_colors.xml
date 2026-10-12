@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand blue, the same value as CurveMapsLightColors' primary (ui/theme/Palette.kt). -->
+    <color name="ic_launcher_background">#0B70C2</color>
+</resources>

@@ -1,0 +1,15 @@
+{
+  "uniqueId": "curvemaps.data:material-symbols",
+  "name": "Material Symbols (app icons)",
+  "description": "Rounded icons used throughout the app, converted to vector drawables. © Google LLC. Under the Apache License 2.0.",
+  "website": "https://github.com/google/material-design-icons",
+  "developers": [
+    {
+      "name": "Google LLC"
+    }
+  ],
+  "licenses": [
+    "Apache-2.0"
+  ],
+  "tag": "data"
+}

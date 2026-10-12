@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <queries>
+        <package android:name="com.spotify.music" />
+        <package android:name="com.aspiro.tidal" />
+        <package android:name="deezer.android.app" />
+        <package android:name="com.apple.android.music" />
+        <package android:name="com.google.android.apps.youtube.music" />
+        <package android:name="com.qobuz.music" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_MUSIC" />
+        </intent>
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+        </intent>
+        <!-- A stopped player's media-button receiver: Start sends it one PLAY
+             press so music can begin without leaving the ride. -->
+        <intent>
+            <action android:name="android.intent.action.MEDIA_BUTTON" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Media control center: adjust the local music stream and (with the
+         user-granted notification listener) query active media sessions.
+         No privileged MEDIA_CONTENT_CONTROL, no Spotify SDK, no network. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Amplitude-controlled approach pulses for the ride-style detents. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Regional package downloads only (Maps settings → map server). Routing,
+         offline place search, and map rendering never touch the network;
+         OfflineGuaranteeTest pins that download-only boundary to
+         com.curvemaps.app.region.net. Release builds require HTTPS. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="CurveMaps"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <!-- Picture-in-Picture: the ride shrinks to a small window while a
+             music player that it opened is in front (RidePictureInPicture).
+             configChanges keeps the activity, the map and the ride alive
+             through that resize (and through rotation) instead of
+             recreating them; the Compose layout measures, never reads the
+             configuration. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:supportsPictureInPicture="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- "Open with" / "Share to" CurveMaps for GPX files from other apps.
+             A no-UI trampoline hands the file to MainActivity in CurveMaps'
+             own task (OpenGpxActivity), so the planner never starts twice. -->
+        <activity
+            android:name=".OpenGpxActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter android:label="Ride in CurveMaps">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/gpx+xml" />
+                <data android:mimeType="application/gpx" />
+                <data android:mimeType="application/x-gpx" />
+                <data android:mimeType="application/x-gpx+xml" />
+            </intent-filter>
+            <!-- Many file managers type a .gpx as a generic binary; match it
+                 by name where the URI shows one. -->
+            <intent-filter android:label="Ride in CurveMaps">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:pathPattern=".*\\.gpx" />
+                <data android:pathPattern=".*\\..*\\.gpx" />
+                <data android:pathPattern=".*\\.GPX" />
+            </intent-filter>
+            <intent-filter android:label="Ride in CurveMaps">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/gpx+xml" />
+                <data android:mimeType="application/gpx" />
+                <data android:mimeType="application/x-gpx" />
+                <data android:mimeType="application/x-gpx+xml" />
+                <data android:mimeType="text/xml" />
+                <data android:mimeType="application/xml" />
+            </intent-filter>
+        </activity>
+
+        <!-- Minimal notification listener: exists only to read active media
+             sessions for the ride media control center. It overrides no
+             notification callback, so notification content is never touched.
+             The system binds it only when the user enables access. -->
+        <service
+            android:name=".media.MediaNotificationListenerService"
+            android:exported="true"
+            android:label="CurveMaps media controls"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>

@@ -1,0 +1,92 @@
+package com.curvemaps.app.assets
+
+import com.curvemaps.app.geocoding.GeocodeResultType
+import com.curvemaps.app.geocoding.GeocoderIndex
+import com.curvemaps.app.geocoding.SearchEngine
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import kotlinx.coroutines.test.runTest
+import org.junit.Test
+import java.io.File
+import java.nio.ByteOrder
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
+import java.util.Locale
+
+class GraphAndGeocoderAssetIntegrityTest {
+
+    @Test
+    fun graphAssetContainsTheStoredMotorcycleProfile() {
+        val root = repoRoot()
+        val graph = root.resolve("app/src/main/assets/graph-cache")
+        listOf("nodes", "edges", "properties").forEach { name ->
+            assertTrue(
+                "Missing graph asset $name; run JAVA_HOME=/opt/homebrew/opt/openjdk@17 " +
+                    "\$JAVA_HOME/bin/java -Xmx12g -cp tools/gh/graphhopper-web-11.0.jar " +
+                    "tools/gh/MotoGraphImport.java import tools/gh/config.yml; cp -R data/graph-cache app/src/main/assets/graph-cache",
+                graph.resolve(name).isFile,
+            )
+        }
+        val properties = graph.resolve("properties").readBytes().toString(Charsets.ISO_8859_1)
+        assertTrue(
+            "Graph profile marker is missing; run JAVA_HOME=/opt/homebrew/opt/openjdk@17 " +
+                "\$JAVA_HOME/bin/java -Xmx12g -cp tools/gh/graphhopper-web-11.0.jar " +
+                "tools/gh/MotoGraphImport.java import tools/gh/config.yml; cp -R data/graph-cache app/src/main/assets/graph-cache",
+            properties.contains("profiles=motorcycle|198752012"),
+        )
+        // Lane guidance is written to edge KV storage only by tools/gh/MotoGraphImport.java;
+        // a graph from the stock `-jar ... import` would silently drop every lane hint.
+        val kvKeys = graph.resolve("edgekv_keys")
+        assertTrue(
+            "Graph has no moto_lanes lane guidance; re-import with tools/gh/MotoGraphImport.java",
+            kvKeys.isFile && kvKeys.readBytes().toString(Charsets.ISO_8859_1).contains("moto_lanes"),
+        )
+        // Ride factors (Route settings > Include in route calculations) need a
+        // 3D graph, per-edge stops and urban density, all from the same import.
+        assertTrue(
+            "Graph is 2D; tools/gh/config.yml must import SRTM elevation (graph.elevation.provider)",
+            com.curvemaps.app.routing.graphHasElevation(graph),
+        )
+        assertTrue(
+            "Graph has no moto_stops stop controls; re-import with tools/gh/MotoGraphImport.java",
+            com.curvemaps.app.routing.graphHasKvKey(graph, "moto_stops"),
+        )
+        assertTrue(
+            "Graph has no urban_density; tools/gh/config.yml needs graph.urban_density.threads",
+            properties.contains("urban_density"),
+        )
+    }
+
+    @Test
+    fun realGeocoderAssetParsesAndAnswersRepresentativeQueries() = runTest {
+        val file = repoRoot().resolve("app/src/main/assets/geocoder/geocoder.dat")
+        assertTrue(
+            "Build it with JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew :geocoder-tool:run --args=\"data/queensland.osm.pbf app/src/main/assets/geocoder\"",
+            file.isFile,
+        )
+        val index = FileChannel.open(file.toPath(), StandardOpenOption.READ).use { channel ->
+            GeocoderIndex.parse(channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size()).order(ByteOrder.LITTLE_ENDIAN))
+        }
+        assertTrue(index.docCount > 0)
+        assertTrue(index.termCount > 0)
+        assertTrue(index.localityCount > 0)
+        val engine = SearchEngine(index, clockMs = { 0L }, logTiming = {})
+
+        val brisbane = engine.search("brisbane")
+        assertTrue(brisbane.any { it.type == GeocodeResultType.LOCALITY && it.name.lowercase(Locale.ROOT).contains("brisbane") })
+        assertTrue(engine.search("queen street").any { it.type == GeocodeResultType.STREET })
+        assertTrue(engine.search("fuel").any { it.type == GeocodeResultType.POI })
+        val coordinate = engine.search("-27.4698, 153.0251")
+        assertEquals(1, coordinate.size)
+        assertEquals(GeocodeResultType.COORDINATE, coordinate.single().type)
+    }
+
+    private fun repoRoot(): File {
+        var directory: File? = File(".").absoluteFile
+        while (directory != null) {
+            if (directory.resolve("settings.gradle.kts").isFile) return directory
+            directory = directory.parentFile
+        }
+        error("Could not locate repository root")
+    }
+}

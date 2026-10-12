@@ -1,0 +1,57 @@
+package com.curvemaps.app
+
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+
+/** Test and accessibility state exposed on the route screen. */
+val RouteUiStateKey = SemanticsPropertyKey<String>("RouteUiState")
+val RouteGenerationKey = SemanticsPropertyKey<Int>("RouteGeneration")
+val SelectedRouteKey = SemanticsPropertyKey<Int>("SelectedRoute")
+val RouteCountKey = SemanticsPropertyKey<Int>("RouteCount")
+val FocusedRouteIndexKey = SemanticsPropertyKey<Int>("FocusedRouteIndex")
+val MapRouteCountKey = SemanticsPropertyKey<Int>("MapRouteCount")
+val MapReadyKey = SemanticsPropertyKey<Boolean>("MapReady")
+val MapInstalledKey = SemanticsPropertyKey<Boolean>("MapInstalled")
+val MapStyleJsonReadyKey = SemanticsPropertyKey<Boolean>("MapStyleJsonReady")
+val MapNativeStyleReadyKey = SemanticsPropertyKey<Boolean>("MapNativeStyleReady")
+val MapStyleLoadedKey = SemanticsPropertyKey<Boolean>("MapStyleLoaded")
+val MapStyleMatchesRequestKey = SemanticsPropertyKey<Boolean>("MapStyleMatchesRequest")
+val MapScreenStartedKey = SemanticsPropertyKey<Boolean>("MapScreenStarted")
+val MapStyleLoadStartedKey = SemanticsPropertyKey<Boolean>("MapStyleLoadStarted")
+val MapStyleLoadGenerationKey = SemanticsPropertyKey<Int>("MapStyleLoadGeneration")
+val MapAppliedStyleReadyKey = SemanticsPropertyKey<Boolean>("MapAppliedStyleReady")
+val MapAppliedStyleMatchesRequestKey = SemanticsPropertyKey<Boolean>("MapAppliedStyleMatchesRequest")
+val MapStyleLoadErrorKey = SemanticsPropertyKey<String>("MapStyleLoadError")
+val MapLoadFailureKey = SemanticsPropertyKey<String>("MapLoadFailure")
+val FollowCameraLockedKey = SemanticsPropertyKey<Boolean>("FollowCameraLocked")
+val FollowCameraSuspendedKey = SemanticsPropertyKey<Boolean>("FollowCameraSuspended")
+val LocationPermissionKey = SemanticsPropertyKey<Boolean>("LocationPermissionGranted")
+val GuidanceActiveKey = SemanticsPropertyKey<Boolean>("GuidanceActive")
+val DarkRideMapEnabledKey = SemanticsPropertyKey<Boolean>("DarkRideMapEnabled")
+val DarkGuidanceStyleReadyKey = SemanticsPropertyKey<Boolean>("DarkGuidanceStyleReady")
+val MediaPanelOpenKey = SemanticsPropertyKey<Boolean>("MediaPanelOpen")
+val MediaCenterStatusKey = SemanticsPropertyKey<String>("MediaCenterStatus")
+val MediaAccessGrantedKey = SemanticsPropertyKey<Boolean>("MediaAccessGranted")
+/** Ride suggestions: "none", "pending:<id>", or "<accepted|skipped|expired>:<id>". */
+val RideSuggestionKey = SemanticsPropertyKey<String>("RideSuggestion")
+val RideSuggestionsEnabledKey = SemanticsPropertyKey<Boolean>("RideSuggestionsEnabled")
+/** Recommended lanes on the guidance card, e.g. "1,2/3" or "0/2 suggested". */
+val RecommendedLanesKey = SemanticsPropertyKey<String>("RecommendedLanes")
+/** Guidance position source: "gps", "estimated", "lost" or "reconciling" (see PositionSource). */
+val PositionSourceKey = SemanticsPropertyKey<String>("PositionSource")
+
+/** Open-source licences screen: "loading", "list", "detail:<entry id>", or "error". */
+val OssLicencesStateKey = SemanticsPropertyKey<String>("OssLicencesState")
+
+/** Regional dataset state (Maps settings + active-region switching). */
+val ActiveRegionKey = SemanticsPropertyKey<String>("ActiveRegion")
+val ActiveRegionGenerationKey = SemanticsPropertyKey<Int>("ActiveRegionGeneration")
+val InstalledRegionCountKey = SemanticsPropertyKey<Int>("InstalledRegionCount")
+val MapsServerCheckedKey = SemanticsPropertyKey<Boolean>("MapsServerChecked")
+val MapsActiveJobKey = SemanticsPropertyKey<String>("MapsActiveJob")
+val MapsDownloadingKey = SemanticsPropertyKey<Boolean>("MapsDownloading")
+val MapsRideActiveKey = SemanticsPropertyKey<Boolean>("MapsRideActive")
+val MapsSavedFileKey = SemanticsPropertyKey<String>("MapsSavedFile")
+val MapsInterruptedKey = SemanticsPropertyKey<Boolean>("MapsInterrupted")
+val MapsPendingRemovalKey = SemanticsPropertyKey<String>("MapsPendingRemoval")
+/** True while the ride HUD's "No GPS" badge is up (see NavigationController.gpsSignalLost). */
+val GpsSignalLostKey = SemanticsPropertyKey<Boolean>("GpsSignalLost")

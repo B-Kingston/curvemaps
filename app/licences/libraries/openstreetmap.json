@@ -1,0 +1,15 @@
+{
+  "uniqueId": "curvemaps.data:openstreetmap",
+  "name": "OpenStreetMap data",
+  "description": "Map data behind the routing graph, map tiles, place search and .motomap packages. © OpenStreetMap contributors. Available under the Open Database License; see openstreetmap.org/copyright.",
+  "website": "https://www.openstreetmap.org/copyright",
+  "developers": [
+    {
+      "name": "OpenStreetMap contributors"
+    }
+  ],
+  "licenses": [
+    "ODbL-1.0"
+  ],
+  "tag": "data"
+}

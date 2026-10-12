@@ -1,0 +1,379 @@
+{
+  "about": "Registered displays for tools/test/gallery.py. Each scenario is one visual.py command; each display is a frame label it must capture (exact `label`, or a `pattern` with fnmatch wildcards and an optional `min` count). A captured frame no display claims is reported as unregistered. `apk` picks the prebuilt variant (bundled, default, or mapless). A scenario whose command accepts --test-apk also gets the frozen androidTest APK for on-device JUnit. `after` runs a scenario on the same emulator right after another, for state it inherits. Add a display here whenever visual.py gains a capture.",
+  "defaults": {
+    "from": "-27.4698,153.0251",
+    "to": "-27.3353,152.7720",
+    "lanesFrom": "-27.4698,153.0251",
+    "lanesTo": "-27.5598,153.0811",
+    "suggestionFrom": "-27.3690,152.8864",
+    "suggestionTo": "-27.5598,153.0811",
+    "roundTripFrom": "-27.3727,152.8864"
+  },
+  "scenarios": [
+    {
+      "id": "first-run",
+      "group": "Welcome",
+      "apk": "mapless",
+      "args": ["first-run"],
+      "displays": [
+        {"label": "first-run-01-welcome", "title": "Welcome"},
+        {"label": "first-run-02-safety", "title": "Ride safely (acknowledgement gate)"},
+        {"label": "first-run-04-location", "title": "Location page"},
+        {"label": "first-run-05-media", "title": "Music while you ride"},
+        {"label": "first-run-06-map", "title": "Offline maps page"},
+        {"label": "first-run-card", "title": "Planner: map needed card"},
+        {"label": "first-run-maps-screen", "title": "Maps screen opened from the card"},
+        {"label": "first-run-back-to-card", "title": "Back returns to the card"},
+        {"label": "first-run-card-dismissed", "title": "Back dismisses the card; settings stay reachable"},
+        {"label": "first-run-03-location-dialog", "title": "System location dialog", "optional": true}
+      ]
+    },
+    {
+      "id": "first-run-bundled",
+      "group": "Welcome",
+      "args": ["first-run", "--bundled"],
+      "displays": [
+        {"label": "first-run-01-welcome", "title": "Welcome (bundled build)"},
+        {"label": "first-run-02-safety", "title": "Ride safely"},
+        {"label": "first-run-04-location", "title": "Location page"},
+        {"label": "first-run-05-media", "title": "Music while you ride"},
+        {"label": "first-run-06-map", "title": "Offline maps page (bundled)"},
+        {"label": "first-run-card", "title": "Planner: offline map file needed"}
+      ]
+    },
+    {
+      "id": "settings-menu",
+      "group": "Planner",
+      "args": ["settings-menu"],
+      "displays": [
+        {"label": "settings-menu-open", "title": "Settings card open"},
+        {"label": "settings-screen-open", "title": "Settings screen"},
+        {"label": "settings-screen-back-to-planner", "title": "Back to planner"},
+        {"label": "settings-menu-dismissed", "title": "Settings card dismissed"}
+      ]
+    },
+    {
+      "id": "oss-licences",
+      "group": "Planner",
+      "args": ["oss-licences"],
+      "displays": [
+        {"label": "oss-licences-settings-row", "title": "Settings card: Open-source licences row"},
+        {"label": "oss-licences-list", "title": "Licence list: map data, fonts and icons"},
+        {"label": "oss-licences-text-odbl", "title": "OpenStreetMap data: ODbL text"},
+        {"label": "oss-licences-libraries", "title": "Software libraries from the dependency graph"},
+        {"label": "oss-licences-text-apache", "title": "GraphHopper Core: Apache-2.0 text"},
+        {"label": "oss-licences-back-to-list", "title": "System Back returns to the list"},
+        {"label": "oss-licences-back-to-planner", "title": "Back to the planner"}
+      ]
+    },
+    {
+      "id": "gpx",
+      "group": "Planner",
+      "args": ["gpx"],
+      "displays": [
+        {"label": "gpx-opened", "title": "Opened GPX track, followed road for road"},
+        {"label": "gpx-endpoints", "title": "Back: the GPX rows"},
+        {"label": "gpx-preview", "title": "Preview: milestones and how the file is ridden"},
+        {"label": "gpx-after-rotation", "title": "Rotation keeps the import"},
+        {"label": "gpx-start-again", "title": "START routes the GPX again"},
+        {"label": "gpx-stops", "title": "Shared stop list keeps the ride styles"},
+        {"label": "gpx-not-a-gpx", "title": "A file that is not a GPX is refused plainly"}
+      ]
+    },
+    {
+      "id": "search-results",
+      "group": "Planner",
+      "args": ["search-results", "--query", "Brisbane"],
+      "displays": [
+        {"label": "search-planner-poi-icon", "title": "Current-location POI action"},
+        {"label": "search-focused-keyboard", "title": "Search focused, keyboard up"},
+        {"label": "search-query-entered", "title": "Query entered"},
+        {"label": "search-results-keyboard-visible", "title": "Results with keyboard"},
+        {"label": "search-results-keyboard-dismissed", "title": "Results, keyboard dismissed"}
+      ]
+    },
+    {
+      "id": "maps-settings",
+      "group": "Maps",
+      "args": ["maps-settings"],
+      "displays": [
+        {"label": "maps-settings-empty", "title": "Map service before Browse maps"},
+        {"label": "maps-preview-catalog-world", "title": "Catalog grouped by continent"},
+        {"label": "maps-preview-catalog-expanded", "title": "Continent expanded"},
+        {"label": "maps-preview-catalog-search", "title": "Region filter"},
+        {"label": "maps-preview-server-error", "title": "Catalog load error"},
+        {"label": "maps-preview-service-connected", "title": "Connected to the CurveMaps map service"},
+        {"label": "maps-preview-catalog-ready", "title": "Catalog ready"},
+        {"label": "maps-preview-build-following", "title": "Following a build (Stop waiting)"},
+        {"label": "maps-preview-search-results", "title": "Find a region results"},
+        {"label": "maps-preview-installing", "title": "Installing after download"},
+        {"label": "maps-preview-build-failed", "title": "Build failed, Retry"},
+        {"label": "maps-preview-download-progress", "title": "Download in progress"},
+        {"label": "maps-preview-download-retrying", "title": "Download retrying"},
+        {"label": "maps-preview-download-verifying", "title": "Verifying download"},
+        {"label": "maps-preview-download-interrupted", "title": "Download interrupted"},
+        {"label": "maps-preview-package-saved", "title": "Package saved"},
+        {"label": "maps-preview-recovered-package", "title": "Recovered package"},
+        {"label": "maps-preview-installed", "title": "Installed maps"},
+        {"label": "maps-delete-confirmation", "title": "Delete confirmation"},
+        {"label": "maps-delete-cancelled", "title": "Delete cancelled"},
+        {"label": "maps-preview-update-check", "title": "Installed maps before the update check"},
+        {"label": "maps-preview-update-available", "title": "Update available on an installed map"},
+        {"label": "maps-preview-updated", "title": "Updated map, up to date"},
+        {"label": "maps-preview-removal-pending", "title": "Removal pending"},
+        {"label": "maps-preview-removal-retry", "title": "Deletion retry after drain timeout"},
+        {"label": "maps-preview-import-deferred", "title": "Import succeeded, activation deferred"},
+        {"label": "maps-preview-install-deferred", "title": "One-tap install deferred by a ride"},
+        {"label": "maps-settings-back-to-planner", "title": "Back to planner"}
+      ]
+    },
+    {
+      "id": "route-ride-factors",
+      "group": "Route and ride",
+      "args": ["route", "--from", "{from}", "--to", "{to}", "--style", "twisty", "--hills", "--stops-towns", "--plan-only"],
+      "displays": [
+        {"label": "route-settings-factors", "title": "Ride factors ticked: hills, stops and towns"},
+        {"label": "route-settings-applied", "title": "Ride factors applied"},
+        {"label": "05-route-ready", "title": "Route card: climb and stop count"}
+      ]
+    },
+    {
+      "id": "route",
+      "group": "Route and ride",
+      "args": ["route", "--from", "{from}", "--to", "{to}", "--style", "balanced", "--avoid-motorways", "--progress", "30", "--black-and-white", "both", "--save-bubble", "--eta-layouts"],
+      "displays": [
+        {"label": "planner-eta-narrow-large-text", "title": "Planner ETA: 320 dp, 2x text"},
+        {"label": "settings-menu-open", "title": "Settings card (to Route settings)"},
+        {"label": "route-settings-open", "title": "Route settings"},
+        {"label": "route-settings-edited", "title": "Route settings edited"},
+        {"label": "route-settings-applied", "title": "Route settings applied"},
+        {"label": "01-options-ready", "title": "Options ready"},
+        {"label": "02-from-entered", "title": "From entered"},
+        {"label": "03-endpoints-ready", "title": "Endpoints ready"},
+        {"label": "04-routing", "title": "Routing in progress"},
+        {"pattern": "routing-*", "title": "Routing progress frames", "min": 0},
+        {"pattern": "styles-growing-*", "title": "Ride-style wave growing", "min": 0},
+        {"label": "05-route-ready", "title": "Route ready, ride styles"},
+        {"label": "save-bubble-saved", "title": "Route card: bookmark saved, bubble confirms"},
+        {"label": "save-bubble-prompt", "title": "Route card: long-press save bubble"},
+        {"label": "ride-start-location", "title": "Ride start location"},
+        {"label": "06-ride-active", "title": "Ride active"},
+        {"label": "ride-map-black-and-white-on", "title": "Ride, B&W map"},
+        {"label": "ride-map-black-and-white-off", "title": "Ride, colour map"},
+        {"pattern": "progress-30-step-*", "title": "Progress steps to 30 %", "min": 1},
+        {"label": "progress-30-percent", "title": "Ride at 30 %"}
+      ]
+    },
+    {
+      "id": "icon-states",
+      "group": "Route and ride",
+      "after": "route",
+      "args": ["icon-states"],
+      "displays": [
+        {"label": "guidance-icons-initial", "title": "Ride rail icons"},
+        {"label": "guidance-icons-voice-settings", "title": "Voice settings from the rail"},
+        {"pattern": "guidance-icons-voice-*", "title": "Voice on / off", "min": 2},
+        {"pattern": "ride-map-black-and-white-*", "title": "Moon toggle states", "min": 1}
+      ]
+    },
+    {
+      "id": "current-location",
+      "group": "Planner",
+      "args": ["current-location", "--to", "{to}", "--plan-only"],
+      "displays": [
+        {"label": "02-current-location-requested", "title": "Current location requested"},
+        {"label": "02-current-location-selected", "title": "Current location selected"},
+        {"label": "03-endpoints-ready", "title": "Endpoints ready"},
+        {"label": "05-route-ready", "title": "Route ready"}
+      ]
+    },
+    {
+      "id": "styles",
+      "group": "Ride styles",
+      "args": ["styles", "--from", "{from}", "--to", "{to}"],
+      "displays": [
+        {"label": "style-0-fastest", "title": "Fastest"},
+        {"label": "style-1-mostly-fast", "title": "Mostly fast"},
+        {"label": "style-2-balanced", "title": "Balanced"},
+        {"label": "style-3-curvy", "title": "Curvy"},
+        {"label": "style-4-twisty", "title": "Twisty"},
+        {"label": "style-5-very-twisty", "title": "Very twisty"},
+        {"label": "style-6-max-twisty", "title": "Max twisty"},
+        {"pattern": "style-drag-*", "title": "Pill between stops", "min": 3},
+        {"label": "styles-back-to-fields", "title": "Back to From and To"},
+        {"label": "styles-reopened", "title": "START again: styles reopen"}
+      ]
+    },
+    {
+      "id": "curve-shading",
+      "group": "Ride styles",
+      "args": ["curve-shading", "--from", "{from}", "--to", "{to}"],
+      "displays": [
+        {"pattern": "styles-growing-*", "title": "Ride-style wave growing", "min": 0},
+        {"label": "curve-shading-overview", "title": "Max twisty: route line coloured on its curvy stretches"},
+        {"label": "curve-shading-transition", "title": "Where the twistiest stretch begins: the colour eases in"},
+        {"label": "curve-shading-bends", "title": "The twistiest bends, full curvy colour"}
+      ]
+    },
+    {
+      "id": "round-trip",
+      "group": "Ride styles",
+      "args": ["round-trip", "--from", "{roundTripFrom}", "--minutes", "60"],
+      "displays": [
+        {"label": "round-trip-01-from", "title": "Round trip: From entered"},
+        {"label": "round-trip-02-toggled-on", "title": "Round trip on: To becomes the length"},
+        {"label": "round-trip-03-measure-selector", "title": "Round trip settings: the measure selector"},
+        {"label": "round-trip-04-measure-picked", "title": "Measure picked on the selector"},
+        {"label": "round-trip-05-stepped", "title": "One press longer"},
+        {"label": "round-trip-06-length-set", "title": "Length set"},
+        {"pattern": "round-trip-growing-*", "title": "Loops being found", "min": 0},
+        {"label": "round-trip-style-0-fastest", "title": "Round trip: Fastest"},
+        {"label": "round-trip-style-1-mostly-fast", "title": "Round trip: Mostly fast"},
+        {"label": "round-trip-style-2-balanced", "title": "Round trip: Balanced"},
+        {"label": "round-trip-style-3-curvy", "title": "Round trip: Curvy"},
+        {"label": "round-trip-style-4-twisty", "title": "Round trip: Twisty"},
+        {"label": "round-trip-style-5-very-twisty", "title": "Round trip: Very twisty"},
+        {"label": "round-trip-style-6-max-twisty", "title": "Round trip: Max twisty"},
+        {"label": "round-trip-07-back-to-fields", "title": "Back keeps the round trip"}
+      ]
+    },
+    {
+      "id": "media-controls",
+      "group": "Media panel",
+      "args": ["media-controls", "--from", "{lanesFrom}", "--to", "{lanesTo}", "--cold-start"],
+      "displays": [
+        {"label": "media-ride-active", "title": "Ride before opening media"},
+        {"label": "media-panel-color-playing", "title": "Colour map, playing"},
+        {"label": "media-panel-bw-playing", "title": "B&W map, playing"},
+        {"label": "media-panel-bw-paused", "title": "B&W map, paused"},
+        {"label": "media-panel-bw-no-player", "title": "No player"},
+        {"pattern": "media-music-app*", "title": "Music apps disclosure", "min": 1},
+        {"label": "media-cold-player-before-start", "title": "Cold start: before Start"},
+        {"label": "media-cold-player-playing", "title": "Cold start: playing"},
+        {"label": "media-cold-player-paused", "title": "Cold start: paused"},
+        {"label": "media-cold-player-button", "title": "Cold start: media button, ride stays in front"},
+        {"label": "media-cold-player-pip", "title": "Cold start: ride in its Picture-in-Picture window over the player"},
+        {"label": "media-cold-player-returned", "title": "Cold start: back from the player's screen"},
+        {"label": "media-panel-bw-permission-needed", "title": "Notification access needed"},
+        {"label": "media-panel-dismissed-with-back", "title": "Dismissed with Back"},
+        {"label": "media-panel-inactivity-full", "title": "Inactivity timer full"},
+        {"label": "media-panel-inactivity-half", "title": "Inactivity timer half"},
+        {"label": "media-panel-inactivity-closed", "title": "Closed by inactivity"},
+        {"pattern": "ride-map-black-and-white-*", "title": "Map mode switches", "min": 1}
+      ]
+    },
+    {
+      "id": "nav-camera",
+      "group": "Guidance camera",
+      "args": ["nav-camera", "--from", "{from}", "--to", "{to}", "--black-and-white", "both"],
+      "displays": [
+        {"pattern": "nav-camera-00-guidance-start*", "title": "Guidance start", "min": 2},
+        {"pattern": "nav-camera-01-street-close*", "title": "Street-close framing", "min": 2},
+        {"pattern": "nav-camera-lock-*", "title": "Rider lock and inspection", "min": 2},
+        {"pattern": "nav-camera-rider-lock-*", "title": "Rider lock off / relocked", "min": 2},
+        {"pattern": "nav-camera-recenter-restored*", "title": "Recenter restored", "min": 1},
+        {"pattern": "nav-camera-gesture-*", "title": "Pan pause and return", "min": 2},
+        {"pattern": "nav-camera-02-speed-*", "title": "Speed bands z18 to z14", "min": 5},
+        {"pattern": "nav-camera-03-*", "title": "Heading and turn approach", "min": 2},
+        {"pattern": "nav-camera-04-turn-mid*", "title": "Mid turn", "min": 1},
+        {"pattern": "nav-camera-05-turn-exited*", "title": "Turn exited", "min": 1},
+        {"label": "nav-camera-06-exit-restored-planning", "title": "Planning camera restored"}
+      ]
+    },
+    {
+      "id": "lanes",
+      "group": "Guidance camera",
+      "args": ["lanes", "--from", "{lanesFrom}", "--to", "{lanesTo}"],
+      "displays": [
+        {"label": "lanes-00-guidance-start", "title": "Lane route start"},
+        {"pattern": "lanes-*-approach", "title": "Lane guidance approaching a maneuver", "min": 1},
+        {"pattern": "lanes-*-after", "title": "After the maneuver", "min": 0}
+      ]
+    },
+    {
+      "id": "pace",
+      "group": "Route and ride",
+      "args": ["pace", "--from", "{from}", "--to", "{to}"],
+      "displays": [
+        {"pattern": "pace-*", "title": "Pace HUD checkpoints", "min": 4}
+      ]
+    },
+    {
+      "id": "gps-loss",
+      "group": "Route and ride",
+      "args": ["gps-loss", "--from", "{from}", "--to", "{to}"],
+      "displays": [
+        {"label": "gps-loss-00-riding", "title": "Riding on live GPS"},
+        {"label": "gps-loss-01-estimating", "title": "GPS lost: No GPS badge, progress estimated along the route"},
+        {"label": "gps-loss-02-estimating-later", "title": "Estimate still advancing"},
+        {"label": "gps-loss-02-fallback-fixes", "title": "Fresh fallback fixes: estimate continues without the No GPS badge"},
+        {"label": "gps-loss-03-recovering", "title": "GPS back: marker eases from the estimate"},
+        {"label": "gps-loss-04-recovering-mid", "title": "Mid-glide onto the live fix", "optional": true},
+        {"label": "gps-loss-05-live", "title": "Settled on live GPS"},
+        {"label": "gps-loss-06-stopped-no-fix", "title": "Stopped without a fix: badge, no estimate"}
+      ]
+    },
+    {
+      "id": "suggestions",
+      "group": "Ride suggestions",
+      "args": ["suggestions", "--from", "{suggestionFrom}", "--to", "{suggestionTo}", "--style", "balanced", "--decision", "take"],
+      "displays": [
+        {"pattern": "suggestions-before-check*", "title": "Before the first check", "min": 1},
+        {"pattern": "suggestions-offer*", "title": "Offer", "min": 1},
+        {"pattern": "suggestions-near-fork*", "title": "Near-fork reminder", "min": 0},
+        {"pattern": "suggestions-take*", "title": "Taken", "min": 1},
+        {"pattern": "suggestions-no-offer*", "title": "No offer found", "min": 0}
+      ]
+    },
+    {
+      "id": "ui-sizes",
+      "group": "Responsive UI sizes",
+      "args": ["ui-sizes"],
+      "displays": [
+        {"pattern": "ui-size-*-endpoints", "title": "From/To beside START across every window and font scale", "min": 63},
+        {"pattern": "ui-size-*-planner", "title": "Planner across every window and font scale", "min": 63},
+        {"pattern": "ui-size-*-ride", "title": "Ride across every window and font scale", "min": 63},
+        {"pattern": "ui-size-*-settings", "title": "Settings across every window and font scale", "min": 63},
+        {"pattern": "ui-size-*-welcome", "title": "Welcome across every window and font scale", "min": 63}
+      ]
+    },
+    {
+      "id": "saved-routes",
+      "group": "Saved rides",
+      "args": ["saved-routes", "--from", "{from}", "--to", "{to}"],
+      "displays": [
+        {"label": "saved-routes-empty", "title": "Saved routes: empty state"},
+        {"pattern": "styles-growing-*", "title": "Second ride style searching", "min": 0},
+        {"label": "05-route-ready", "title": "Route ready, ride styles"},
+        {"label": "saved-routes-list", "title": "Saved routes: two saved rides"},
+        {"label": "saved-routes-comment-composer", "title": "Saved routes: comment composer open"},
+        {"label": "saved-routes-commented", "title": "Saved routes: comment added"},
+        {"label": "saved-routes-delete-confirmation", "title": "Saved routes: delete confirmation"},
+        {"label": "saved-routes-delete-cancelled", "title": "Saved routes: delete cancelled, ride kept"},
+        {"label": "saved-routes-opened", "title": "Saved ride opened in the planner"}
+      ]
+    },
+    {
+      "id": "buildings",
+      "group": "Map rendering",
+      "optional": true,
+      "args": ["buildings"],
+      "displays": [
+        {"pattern": "buildings-*", "title": "3D buildings, city and landscape", "min": 6}
+      ]
+    }
+  ],
+  "shared": [
+    {"label": "00-launched", "title": "App launched", "setup": true},
+    {"label": "00-welcome-carousel", "title": "Welcome carousel at launch", "setup": true},
+    {"label": "settings-menu-open", "title": "Settings card", "setup": true},
+    {"pattern": "route-settings-*", "title": "Route settings", "setup": true, "min": 0},
+    {"pattern": "0[1-6]-*", "title": "Planning flow", "setup": true, "min": 0},
+    {"pattern": "routing-*", "title": "Routing progress", "setup": true, "min": 0},
+    {"label": "ride-start-location", "title": "Ride start location", "setup": true},
+    {"pattern": "ride-map-black-and-white-*", "title": "Map mode switch", "setup": true, "min": 0},
+    {"pattern": "route-error*", "title": "Route error", "min": 0},
+    {"pattern": "route-timeout*", "title": "Route timeout", "min": 0},
+    {"pattern": "progress-restart*", "title": "Progress restart", "min": 0}
+  ]
+}

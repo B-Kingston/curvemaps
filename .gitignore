@@ -1,0 +1,37 @@
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+data/
+app/src/main/assets/graph-cache/
+tools/gh/*.jar
+*.osm.pbf
+
+# Generated geocoding search index (built by :geocoder-tool from the OSM PBF)
+app/src/main/assets/geocoder/
+tools/tiles/*.jar
+
+# Generated offline basemap tiles (built by tools/tiles/build-tiles.sh)
+app/src/main/assets/tiles/
+
+# Generated offline glyphs + sprites (built by tools/style/fetch-style-assets.sh)
+data/style/
+app/src/main/assets/glyphs/
+app/src/main/assets/sprites/
+
+# Local-only knowledge notes
+*.local.md
+
+# Python bytecode from tools/test
+__pycache__/
+
+# Cloudflare CLI local cache (account metadata)
+.cloudflare/

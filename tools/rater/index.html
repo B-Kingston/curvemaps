@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Route Rater</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  body { margin: 0; font: 12px/1.35 system-ui, sans-serif; display: flex; height: 100vh; background: #fff; color: #111; }
+  #side { width: 700px; min-width: 700px; overflow-y: auto; padding: 6px 8px; box-sizing: border-box; border-right: 1px solid #999; }
+  #map { flex: 1; }
+  input[type=text] { width: 330px; font: inherit; }
+  button { font: inherit; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 1px 3px; text-align: right; white-space: nowrap; }
+  th { background: #eee; }
+  td.l { text-align: left; }
+  tr.sel td { outline: 2px solid #000; outline-offset: -2px; }
+  tr.chosen td { font-weight: bold; }
+  tr { cursor: pointer; }
+  .good { background: #c8f0c8; }
+  .bad { background: #f5c4c4; }
+  .results button { display: block; width: 100%; text-align: left; }
+  .sw { display: inline-block; width: 10px; height: 10px; margin-right: 3px; }
+  .box { border: 1px solid #bbb; padding: 4px; margin: 4px 0; }
+  .muted { color: #666; }
+  .err { color: #b00; }
+  pre { white-space: pre-wrap; font-size: 11px; margin: 2px 0; max-height: 360px; overflow: auto; background: #f6f6f6; }
+  summary { cursor: pointer; font-weight: bold; }
+  label { white-space: nowrap; margin-right: 6px; }
+  kbd { border: 1px solid #999; padding: 0 2px; font-size: 10px; }
+  h4 { margin: 4px 0 2px; }
+</style>
+</head>
+<body>
+<div id="side">
+  <details id="mapsBox" class="box">
+    <summary>Map data: <span id="regionName">none</span></summary>
+    <div>Installed: <select id="regionSel"></select> <button id="activateBtn">Use</button></div>
+    <div><button id="catalogBtn">Browse downloadable maps</button> <span id="catalogStatus" class="muted"></span></div>
+    <div id="catalog"></div>
+    <div>Local .motomap: <input type="text" id="filePath" placeholder="data/package/queensland.motomap"> <button id="fileBtn">Install</button></div>
+  </details>
+
+  <div class="box">
+    <div>From <input type="text" id="fromQ" placeholder="place, or lat,lon (Enter)"> <span id="fromPt" class="muted"></span></div>
+    <div id="fromRes" class="results"></div>
+    <div>To&nbsp;&nbsp;&nbsp;&nbsp; <input type="text" id="toQ" placeholder="place, or lat,lon (Enter)"> <span id="toPt" class="muted"></span></div>
+    <div id="toRes" class="results"></div>
+    <div>Map click sets:
+      <label><input type="radio" name="clickTarget" value="from" checked> From</label>
+      <label><input type="radio" name="clickTarget" value="to"> To</label>
+      <button id="swapBtn">Swap</button>
+      <label><input type="checkbox" id="autoPlan" checked> plan when both set</label>
+    </div>
+    <div>
+      <label><input type="checkbox" id="optHills"> Hills</label>
+      <label><input type="checkbox" id="optStops"> Stops &amp; towns</label>
+      <label><input type="checkbox" id="optMotorways"> Avoid motorways</label>
+      <label><input type="checkbox" id="optUnpaved"> Block unpaved</label>
+    </div>
+    <div><button id="planBtn">Plan 7 styles</button> <label><input type="checkbox" id="fresh"> recompute (ignore saved plan)</label></div>
+    <div id="status" class="muted"></div>
+  </div>
+
+  <div style="overflow-x:auto"><table id="stopsTable"></table></div>
+
+  <div class="box" id="rateBox">
+    <div><b id="selLabel">Nothing selected</b></div>
+    <div>
+      <button id="goodBtn">Good <kbd>G</kbd></button>
+      <button id="badBtn">Bad <kbd>B</kbd></button>
+      <button id="clearBtn">Clear <kbd>C</kbd></button>
+      <label><input type="checkbox" id="autoAdvance" checked> next stop after rating</label>
+      <span class="muted"><kbd>1</kbd>-<kbd>7</kbd> stop, <kbd>←</kbd><kbd>→</kbd> prev/next, <kbd>V</kbd> candidates</span>
+    </div>
+    <div id="reasons"></div>
+    <div>Note <input type="text" id="note" placeholder="e.g. should use Mt Mee Rd; skips the good bit of the range"></div>
+    <div id="priorLine" class="muted"></div>
+  </div>
+
+  <details class="box" id="candBox">
+    <summary>Candidates the search found for this stop (<span id="candCount">0</span>)</summary>
+    <label><input type="checkbox" id="showCands"> draw on map</label>
+    <span class="muted">Click a row (or a grey line) to look at / rate it. Bold = shown by the planner.</span>
+    <div style="overflow-x:auto"><table id="candTable"></table></div>
+  </details>
+
+  <details class="box">
+    <summary>Selected route data</summary>
+    <pre id="featPre"></pre>
+  </details>
+
+  <details class="box" id="histBox">
+    <summary>History, replay &amp; export</summary>
+    <div>
+      <a href="/api/export.json">Export JSON</a> ·
+      <a href="/api/export.csv">Export CSV</a> ·
+      <button id="replayBtn">Replay rated requests with current code</button>
+      <button id="histBtn">Refresh</button>
+      <label><input type="checkbox" id="histAll"> Show sweep plans</label>
+    </div>
+    <div id="dataDir" class="muted"></div>
+    <pre id="replayPre"></pre>
+    <table id="histTable"></table>
+  </details>
+</div>
+<div id="map"></div>
+
+<script>
+"use strict";
+const COLORS = ["#1f77b4", "#17becf", "#2ca02c", "#9a9a00", "#ff7f0e", "#d62728", "#9467bd"];
+const REASONS = [
+  "not curvy enough", "too slow / long", "pointless detour or loop", "too urban / many stops",
+  "boring highway", "bad surface / gravel", "same as another stop", "wrong for this style",
+  "better road nearby", "great roads",
+];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const fmt = (v, d = 1) => v == null ? "–" : Number(v).toFixed(d);
+const pct = v => v == null ? "–" : Math.round(v * 100) + "%";
+
+const state = { info: null, plan: null, from: null, to: null, sel: null };
+
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const json = await res.json();
+  if (!res.ok || json.error) throw new Error(json.error || res.status);
+  return json;
+}
+function status(text, error) { $("status").innerHTML = error ? `<span class="err">${esc(text)}</span>` : esc(text); }
+
+// ---------- map ----------
+const map = L.map("map", { zoomControl: true }).setView([-27.0, 153.0], 9);
+const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap contributors" }).addTo(map);
+const topo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", { maxZoom: 17, attribution: "© OpenStreetMap contributors, SRTM | © OpenTopoMap (CC-BY-SA)" });
+const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "Imagery © Esri" });
+L.control.layers({ "OSM": osm, "OpenTopoMap": topo, "Satellite": sat }).addTo(map);
+const routeLayer = L.layerGroup().addTo(map);
+const candLayer = L.layerGroup().addTo(map);
+let boundsRect = null;
+const markers = {};
+
+function setPoint(which, lat, lon, name) {
+  state[which] = { lat, lon, name: name || `${lat.toFixed(5)}, ${lon.toFixed(5)}` };
+  $(which + "Q").value = state[which].name;
+  $(which + "Pt").textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+  if (markers[which]) markers[which].setLatLng([lat, lon]);
+  else {
+    markers[which] = L.marker([lat, lon], { draggable: true, title: which }).addTo(map).bindTooltip(which === "from" ? "A" : "B", { permanent: true, direction: "top" });
+    markers[which].on("dragend", async e => {
+      const p = e.target.getLatLng();
+      setPoint(which, p.lat, p.lng, await reverseName(p.lat, p.lng));
+      maybePlan();
+    });
+  }
+}
+async function reverseName(lat, lon) {
+  try { return (await api(`/api/reverse?lat=${lat}&lon=${lon}`)).name; } catch { return null; }
+}
+map.on("click", async e => {
+  const which = document.querySelector("input[name=clickTarget]:checked").value;
+  const { lat, lng } = e.latlng;
+  setPoint(which, lat, lng, null);
+  setPoint(which, lat, lng, await reverseName(lat, lng));
+  document.querySelector(`input[name=clickTarget][value=${which === "from" ? "to" : "from"}]`).checked = true;
+  maybePlan();
+});
+
+// ---------- search ----------
+for (const which of ["from", "to"]) {
+  $(which + "Q").addEventListener("keydown", async e => {
+    if (e.key !== "Enter") return;
+    const c = map.getCenter();
+    try {
+      const { results } = await api(`/api/geocode?q=${encodeURIComponent(e.target.value)}&lat=${c.lat}&lon=${c.lng}`);
+      const box = $(which + "Res");
+      box.innerHTML = results.length ? "" : '<span class="muted">no results</span>';
+      results.forEach(r => {
+        const b = document.createElement("button");
+        b.textContent = `${r.name} — ${r.subtitle} (${r.type.toLowerCase()})`;
+        b.onclick = () => { setPoint(which, r.lat, r.lon, r.name); box.innerHTML = ""; maybePlan(); };
+        box.appendChild(b);
+      });
+      if (results.length === 1) box.firstChild.click();
+    } catch (err) { status(err.message, true); }
+  });
+}
+$("swapBtn").onclick = () => {
+  const f = state.from, t = state.to;
+  if (t) setPoint("from", t.lat, t.lon, t.name);
+  if (f) setPoint("to", f.lat, f.lon, f.name);
+  maybePlan();
+};
+
+// ---------- planning ----------
+function maybePlan() { if ($("autoPlan").checked && state.from && state.to) plan(); }
+let planSeq = 0;
+async function plan() {
+  if (!state.from || !state.to) return status("Set From and To first", true);
+  const seq = ++planSeq;
+  const body = {
+    from: state.from, to: state.to,
+    elevation: $("optHills").checked, stopsAndTowns: $("optStops").checked,
+    avoidMotorways: $("optMotorways").checked, blockUnpaved: $("optUnpaved").checked,
+    fresh: $("fresh").checked,
+  };
+  status("Planning seven styles…");
+  try {
+    const p = await api("/api/plan", body);
+    if (seq !== planSeq) return;
+    showPlan(p, true);
+    status(`${p.cached ? "saved plan (" + p.searches + " searches when computed)" : p.searches + " searches, " + p.millis + " ms on the server"} · plan ${p.planId} · code ${p.algo.hash}${p.algo.dirty ? " (dirty " + p.algo.git + ")" : " " + p.algo.git} · map ${p.region.id}`);
+  } catch (err) { if (seq === planSeq) status(err.message, true); }
+}
+$("planBtn").onclick = plan;
+for (const id of ["optHills", "optStops", "optMotorways", "optUnpaved"]) $(id).onchange = maybePlan;
+
+function showPlan(p, fit) {
+  state.plan = p;
+  state.candByLevel = {};
+  p.candidates.forEach(c => (state.candByLevel[c.level] ||= []).push(c));
+  const keep = state.sel && state.sel.level;
+  select(keep ?? 0, null, false);
+  if (fit) {
+    const all = p.stops.flatMap(s => p.routes[s.routeKey].geometry);
+    if (all.length) map.fitBounds(L.latLngBounds(all), { padding: [30, 30] });
+  }
+  if (p.stale) status("Saved plan from older code (" + p.algo.hash + "). Tick recompute and plan again to see the current code.", true);
+}
+
+function ratingOf(level, key) { return state.plan?.ratings?.[`${level}#${key}`]; }
+function priorOf(level, key) {
+  const pr = state.plan?.prior || {};
+  return pr[`${level}#${key}`] || (pr[`*#${key}`] ? { ...pr[`*#${key}`], other: true } : null);
+}
+function ratingCell(level, key) {
+  const r = ratingOf(level, key), pr = priorOf(level, key);
+  let s = r ? (r.rating === "good" ? "✓ good" : "✗ bad") : "";
+  if (pr) s += ` <span class="muted">(was ${pr.rating === "good" ? "✓" : "✗"}${pr.other ? " at L" + pr.level : ""})</span>`;
+  return s;
+}
+
+function renderStops() {
+  const p = state.plan;
+  if (!p) return;
+  let h = "<tr><th>L</th><th class=l>rating</th><th class=l>style</th><th>min</th><th>km</th><th>×opt</th><th>curvy</th><th>run km</th><th>bends/km</th><th>stops</th><th>climb</th><th>mwy</th><th>urban</th><th class=l>found by</th></tr>";
+  p.stops.forEach(s => {
+    const f = p.routes[s.routeKey].features, r = ratingOf(s.level, s.routeKey);
+    const cls = [r ? r.rating : "", state.sel && state.sel.level === s.level ? "sel" : ""].join(" ");
+    h += `<tr class="${cls}" data-level="${s.level}"><td><span class="sw" style="background:${COLORS[s.level]}"></span>${s.level + 1}</td><td class=l>${ratingCell(s.level, s.routeKey)}</td><td class=l>${esc(s.style)}</td>`
+      + `<td>${fmt(f.timeMin)}</td><td>${fmt(f.distanceKm)}</td><td>${fmt(f.timeVsFastest, 2)}</td><td>${pct(f.curvyShare)}</td><td>${fmt(f.longestCurvyRunKm)}</td>`
+      + `<td>${fmt(f.bendsPerKm, 2)}</td><td>${f.stops ?? "–"}</td><td>${fmt(f.climbM, 0)}</td><td>${pct(f.motorwayTrunkShare)}</td><td>${pct(f.urbanShare)}</td>`
+      + `<td class=l>${esc(s.stage)}${s.round ? " r" + s.round : ""}${s.budget !== "STYLE" ? " · " + esc(s.budget) : ""}${s.repeats ? " · repeats " + esc(s.repeats) : ""}</td></tr>`;
+  });
+  $("stopsTable").innerHTML = h;
+  $("stopsTable").querySelectorAll("tr[data-level]").forEach(tr => tr.onclick = () => select(+tr.dataset.level, null));
+}
+
+function renderCands() {
+  const p = state.plan, level = state.sel.level;
+  const list = (state.candByLevel[level] || []);
+  $("candCount").textContent = list.filter(c => c.routeKey).length;
+  let h = "<tr><th>#</th><th class=l>stage</th><th>cw</th><th>pen</th><th>min</th><th>km</th><th>×opt</th><th>curvy</th><th>run km</th><th class=l>verdict</th><th>×</th><th class=l>rating</th></tr>";
+  list.forEach((c, i) => {
+    if (!c.routeKey) {
+      h += `<tr class="muted"><td>${i}</td><td class=l>${esc(c.stage)}</td><td>${fmt(c.curveWeight, 2)}</td><td>${fmt(c.roadPenalty, 2)}</td><td colspan=8 class=l>${esc(c.verdict)}: ${esc(c.error)}</td></tr>`;
+      return;
+    }
+    const f = p.routes[c.routeKey].features, r = ratingOf(level, c.routeKey);
+    const cls = [c.chosen ? "chosen" : "", r ? r.rating : "", state.sel.routeKey === c.routeKey ? "sel" : ""].join(" ");
+    h += `<tr class="${cls}" data-key="${c.routeKey}"><td>${i}</td><td class=l>${esc(c.stage)}</td><td>${fmt(c.curveWeight, 2)}</td><td>${fmt(c.roadPenalty, 2)}</td>`
+      + `<td>${fmt(f.timeMin)}</td><td>${fmt(f.distanceKm)}</td><td>${fmt(c.timeVsStyleOptimum, 2)}</td><td>${pct(f.curvyShare)}</td><td>${fmt(f.longestCurvyRunKm)}</td>`
+      + `<td class=l>${esc(c.verdict)}</td><td>${c.foundTimes}</td><td class=l>${ratingCell(level, c.routeKey)}</td></tr>`;
+  });
+  $("candTable").innerHTML = h;
+  $("candTable").querySelectorAll("tr[data-key]").forEach(tr => tr.onclick = () => select(level, tr.dataset.key));
+}
+
+function drawRoutes() {
+  const p = state.plan, sel = state.sel;
+  routeLayer.clearLayers();
+  candLayer.clearLayers();
+  if ($("showCands").checked) {
+    const seen = new Set();
+    (state.candByLevel[sel.level] || []).forEach(c => {
+      if (!c.routeKey || seen.has(c.routeKey)) return;
+      seen.add(c.routeKey);
+      L.polyline(p.routes[c.routeKey].geometry, { color: "#555", weight: 3, opacity: 0.5, dashArray: "4 6" })
+        .on("click", ev => { L.DomEvent.stopPropagation(ev); select(sel.level, c.routeKey); })
+        .bindTooltip(`${c.stage} · ${c.verdict}`).addTo(candLayer);
+    });
+  }
+  p.stops.forEach(s => {
+    if (s.level === sel.level && s.routeKey === sel.routeKey) return;
+    L.polyline(p.routes[s.routeKey].geometry, { color: COLORS[s.level], weight: 3, opacity: 0.45 })
+      .on("click", ev => { L.DomEvent.stopPropagation(ev); select(s.level, null); })
+      .bindTooltip(`${s.level + 1} ${s.style}`).addTo(routeLayer);
+  });
+  const isStop = p.stops[sel.level].routeKey === sel.routeKey;
+  L.polyline(p.routes[sel.routeKey].geometry, { color: isStop ? COLORS[sel.level] : "#000", weight: 7, opacity: 0.9 }).addTo(routeLayer).bringToFront();
+  const via = (isStop ? p.stops[sel.level].via : (state.candByLevel[sel.level] || []).find(c => c.routeKey === sel.routeKey)?.via);
+  if (via) L.circleMarker(via, { radius: 6, color: "#000", fillColor: "#ff0", fillOpacity: 1 }).bindTooltip("look-around via").addTo(routeLayer);
+}
+
+function select(level, routeKey, pan = false) {
+  const p = state.plan;
+  if (!p) return;
+  level = Math.max(0, Math.min(6, level));
+  const stop = p.stops[level];
+  state.sel = { level, routeKey: routeKey || stop.routeKey };
+  const key = state.sel.routeKey, isStop = key === stop.routeKey;
+  const route = p.routes[key];
+  const cand = (state.candByLevel[level] || []).find(c => c.routeKey === key);
+  $("selLabel").innerHTML = `<span class="sw" style="background:${isStop ? COLORS[level] : "#000"}"></span>L${level + 1} ${esc(stop.style)} — ${isStop ? "the planner's ride" : "candidate (" + esc(cand?.stage) + ", " + esc(cand?.verdict) + ")"} · ${fmt(route.features.timeMin)} min, ${fmt(route.features.distanceKm)} km, ${pct(route.features.curvyShare)} curvy`;
+  const r = ratingOf(level, key);
+  document.querySelectorAll("#reasons input").forEach(cb => cb.checked = !!r && r.reasons.includes(cb.value));
+  $("note").value = r ? r.note : "";
+  const pr = priorOf(level, key);
+  $("priorLine").textContent = pr ? `Rated ${pr.rating}${pr.other ? " at L" + (pr.level + 1) : ""} under code ${pr.algo}${pr.reasons.length ? ": " + pr.reasons.join(", ") : ""}${pr.note ? " — " + pr.note : ""}` : "";
+  $("featPre").textContent = JSON.stringify({ stop: isStop ? stop : undefined, candidate: cand, routeKey: key, features: route.features }, null, 1);
+  renderStops();
+  renderCands();
+  drawRoutes();
+}
+
+// ---------- rating ----------
+$("reasons").innerHTML = REASONS.map(r => `<label><input type="checkbox" value="${esc(r)}"> ${esc(r)}</label>`).join(" ");
+async function rate(rating) {
+  const p = state.plan, sel = state.sel;
+  if (!p || !sel) return;
+  const reasons = [...document.querySelectorAll("#reasons input:checked")].map(cb => cb.value);
+  try {
+    const res = await api("/api/rate", { planId: p.planId, level: sel.level, routeKey: sel.routeKey, rating, reasons, note: $("note").value });
+    p.ratings = res.ratings;
+    const wasStop = p.stops[sel.level].routeKey === sel.routeKey;
+    if (rating && $("autoAdvance").checked && wasStop && sel.level < 6) select(sel.level + 1, null);
+    else select(sel.level, sel.routeKey);
+  } catch (err) { status(err.message, true); }
+}
+$("goodBtn").onclick = () => rate("good");
+$("badBtn").onclick = () => rate("bad");
+$("clearBtn").onclick = () => rate(null);
+$("showCands").onchange = () => state.plan && drawRoutes();
+
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" && e.target.type === "text" || e.target.tagName === "SELECT" || e.metaKey || e.ctrlKey) return;
+  if (!state.plan) return;
+  const k = e.key.toLowerCase();
+  if (k >= "1" && k <= "7") select(+k - 1, null);
+  else if (k === "g") rate("good");
+  else if (k === "b") rate("bad");
+  else if (k === "c") rate(null);
+  else if (k === "v") { $("showCands").checked = !$("showCands").checked; $("candBox").open = true; drawRoutes(); }
+  else if (e.key === "ArrowRight" || k === "j") select(state.sel.level + 1, null);
+  else if (e.key === "ArrowLeft" || k === "k") select(state.sel.level - 1, null);
+  else return;
+  e.preventDefault();
+});
+
+// ---------- maps ----------
+async function loadInfo(fit) {
+  const info = state.info = await api("/api/info");
+  $("regionName").textContent = info.region ? `${info.region.name} · graph ${info.region.graphId}${info.region.geocoder ? "" : " · no geocoder"}` : "none — download or install one below";
+  $("regionSel").innerHTML = info.installed.map(r => `<option value="${esc(r.id)}" ${info.region && info.region.id === r.id ? "selected" : ""}>${esc(r.name)}</option>`).join("");
+  $("dataDir").textContent = "Data: " + info.dataDir + " (ratings.jsonl, plans/)";
+  if (!info.region) $("mapsBox").open = true;
+  if (boundsRect) boundsRect.remove();
+  if (info.region) {
+    const b = info.region.bounds;
+    boundsRect = L.rectangle([[b[0], b[1]], [b[2], b[3]]], { color: "#888", weight: 1, fill: false, dashArray: "2 4", interactive: false }).addTo(map);
+    if (fit) map.fitBounds(boundsRect.getBounds());
+  }
+}
+$("activateBtn").onclick = async () => {
+  try {
+    status("Loading map…");
+    await api("/api/activate", { id: $("regionSel").value });
+    await loadInfo(true);
+    status("Map loaded");
+  } catch (err) { status(err.message, true); }
+};
+let catalog = [];
+async function renderCatalog() {
+  const { downloads, installed } = await api("/api/downloads");
+  const dl = Object.fromEntries(downloads.map(d => [d.regionId, d]));
+  $("catalog").innerHTML = "<table>" + catalog.map(r => {
+    const d = dl[r.id];
+    let action = r.available ? `<button data-dl="${esc(r.id)}">Download${r.installed.length ? " again" : ""}</button>` : '<span class="muted">not built</span>';
+    if (d && !["done", "error"].includes(d.phase)) action = `${d.phase} ${d.total ? Math.round(100 * d.bytes / d.total) + "%" : Math.round(d.bytes / 1e6) + " MB"}`;
+    if (d && d.phase === "error") action += ` <span class="err">${esc(d.error)}</span>`;
+    const inst = r.installed.map(id => `<button data-use="${esc(id)}">Use ${esc(id)}</button>`).join(" ");
+    return `<tr><td class=l>${esc(r.name)}${r.tier === "pro" ? " (Pro)" : ""}</td><td>${esc(r.sourceDate)}</td><td>${Math.round(r.size / 1e6)} MB</td><td class=l>${action} ${inst}</td></tr>`;
+  }).join("") + "</table>";
+  $("catalog").querySelectorAll("[data-dl]").forEach(b => b.onclick = async () => {
+    try { await api("/api/download", { regionId: b.dataset.dl }); pollDownloads(); } catch (err) { $("catalogStatus").textContent = err.message; }
+  });
+  $("catalog").querySelectorAll("[data-use]").forEach(b => b.onclick = async () => {
+    try { status("Loading map…"); await api("/api/activate", { id: b.dataset.use }); await loadInfo(true); status("Map loaded"); } catch (err) { status(err.message, true); }
+  });
+  return downloads.some(d => !["done", "error"].includes(d.phase));
+}
+let polling = false;
+async function pollDownloads() {
+  if (polling) return;
+  polling = true;
+  try {
+    while (true) {
+      const res = await api("/api/catalog");
+      catalog = res.regions;
+      const busy = await renderCatalog();
+      await loadInfo(false);
+      if (!busy) break;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  } finally { polling = false; }
+}
+$("catalogBtn").onclick = async () => {
+  $("catalogStatus").textContent = "Fetching catalog…";
+  try { catalog = (await api("/api/catalog")).regions; await renderCatalog(); $("catalogStatus").textContent = ""; }
+  catch (err) { $("catalogStatus").textContent = err.message; }
+};
+$("fileBtn").onclick = async () => {
+  try {
+    status("Installing package (verifying every file)…");
+    const entry = await api("/api/load-file", { path: $("filePath").value || "data/package/queensland.motomap" });
+    await loadInfo(false);
+    $("regionSel").value = entry.id;
+    status(`Installed ${entry.name}; press Use to route on it`);
+  } catch (err) { status(err.message, true); }
+};
+
+// ---------- history / replay ----------
+async function loadHistory() {
+  const { plans } = await api("/api/plans" + ($("histAll").checked ? "?all=1" : ""));
+  const algo = state.info?.algo?.hash;
+  $("histTable").innerHTML = "<tr><th class=l>when</th><th class=l>from → to</th><th class=l>map</th><th>✓</th><th>✗</th><th class=l>code</th></tr>" + plans.map(p =>
+    `<tr data-id="${p.planId}"><td class=l>${esc(p.createdAt.slice(0, 16).replace("T", " "))}</td><td class=l>${esc(p.from)} → ${esc(p.to)}${p.tag ? ` <span class=muted>(${esc(p.tag)})</span>` : ""}</td><td class=l>${esc(p.region)}</td><td>${p.good}</td><td>${p.bad}</td><td class=l>${esc(p.algo)}${p.algo === algo ? "" : " (old)"}</td></tr>`).join("");
+  $("histTable").querySelectorAll("tr[data-id]").forEach(tr => tr.onclick = () => openPlan(tr.dataset.id));
+}
+/** Shows a saved plan with its request in the form; also reached by #plan=<id> links (agent sweep pages). */
+async function openPlan(id) {
+  try {
+    const p = await api("/api/plan?id=" + encodeURIComponent(id));
+    const q = p.request;
+    setPoint("from", q.from.lat, q.from.lon, q.from.name);
+    setPoint("to", q.to.lat, q.to.lon, q.to.name);
+    $("optHills").checked = q.elevation; $("optStops").checked = q.stopsAndTowns;
+    $("optMotorways").checked = q.avoidMotorways; $("optUnpaved").checked = q.blockUnpaved;
+    state.sel = null;
+    showPlan(p, true);
+    if (!p.stale) status(`Saved plan ${p.planId} · ${p.searches} searches`);
+  } catch (err) { status(err.message, true); }
+}
+const planInHash = () => /(?:^#|&)plan=([0-9a-f]{12})/.exec(location.hash)?.[1];
+window.addEventListener("hashchange", () => planInHash() && openPlan(planInHash()));
+$("histBtn").onclick = loadHistory;
+$("histAll").onchange = loadHistory;
+$("histBox").addEventListener("toggle", () => $("histBox").open && loadHistory());
+$("replayBtn").onclick = async () => {
+  $("replayPre").textContent = "Replaying every rated request on this map with the current code…";
+  try {
+    const r = await api("/api/replay");
+    const lines = [`code ${r.algo.hash} on ${r.region}: ${JSON.stringify(r.totals)}`];
+    r.requests.forEach(q => lines.push(q.error ? `${q.requestKey}: ${q.error}` :
+      `${q.from} → ${q.to}: ` + q.stops.map(s => `${s.level + 1}${s.rated === "good" ? "✓" : s.rated === "bad" ? "✗" : "·"}`).join(" ")));
+    $("replayPre").textContent = lines.join("\n");
+  } catch (err) { $("replayPre").textContent = err.message; }
+};
+
+loadInfo(!planInHash()).then(() => planInHash() && openPlan(planInHash())).catch(err => status("Server not reachable: " + err.message, true));
+</script>
+</body>
+</html>

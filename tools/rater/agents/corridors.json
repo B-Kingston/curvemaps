@@ -1,0 +1,7 @@
+[
+ {"id":"skyline-palmwoods","from":{"lat":-26.6787181,"lon":152.9698004,"name":"Skyline Circuit Drainage Reserve, Palmwoods"},"to":{"lat":-26.6859705,"lon":152.959253,"name":"Palmwoods"},"options":{"avoidMotorways":true,"elevation":false,"stopsAndTowns":true}},
+ {"id":"palmwoods-brisbane","from":{"lat":-26.6859705,"lon":152.959253,"name":"Palmwoods"},"to":{"lat":-27.4689623,"lon":153.0235009,"name":"Brisbane (city)"},"options":{"avoidMotorways":true,"elevation":true,"stopsAndTowns":false}},
+ {"id":"brisbane-toowoomba","from":{"lat":-27.4689623,"lon":153.0235009,"name":"Brisbane (city)"},"to":{"lat":-27.5610193,"lon":151.953351,"name":"Toowoomba"},"options":{"avoidMotorways":false,"elevation":true,"stopsAndTowns":true}},
+ {"id":"nerang-canungra","from":{"lat":-27.9896566,"lon":153.3365942,"name":"Nerang"},"to":{"lat":-28.0171019,"lon":153.165254,"name":"Canungra"},"options":{"avoidMotorways":true,"elevation":true,"stopsAndTowns":true}},
+ {"id":"caboolture-kilcoy","from":{"lat":-27.0839336,"lon":152.9510863,"name":"Caboolture"},"to":{"lat":-26.9431268,"lon":152.5654162,"name":"Kilcoy"},"options":{"avoidMotorways":false,"elevation":false,"stopsAndTowns":false}}
+]

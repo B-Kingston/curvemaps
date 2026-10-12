@@ -1,0 +1,195 @@
+name: light-ci
+
+# The light verification tier (tools/test/ci.sh) on a hosted runner.
+#
+# The generated assets (routing graph, PMTiles basemap, geocoder index,
+# glyphs/sprites) are gitignored, so this workflow regenerates them from the
+# pinned pipeline before invoking tools/test/ci.sh — whose preflight step
+# then validates every artifact exactly like it does locally.
+#
+# Determinism note: the dated OSM extract and GraphHopper jar are cached by
+# key. Update OSM_EXTRACT_DATE and bump CACHE_SEED when refreshing map data.
+#
+# The instrumented/emulator tier stays manual per AGENTS.md
+# (tools/test/run-all.sh on a machine with an AVD).
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+
+env:
+  # Keep in lockstep with `graphhopper` in gradle/libs.versions.toml (stored
+  # graph format is version-bound). Used for the jar URL and cache path below.
+  GRAPHHOPPER_VERSION: "11.0"
+  GRAPHHOPPER_JAR_SHA256: b59c024afe172ec6ec85b6327006c3138ec58c7d0bcd26253d0e42853f613def
+  # Geofabrik's `latest` alias currently loops through a cached slash redirect.
+  # Pin the current dated Queensland extract until that alias is healthy again.
+  OSM_EXTRACT_DATE: "260928"
+  # v3: tools/tiles/build-tiles.sh gained configurable work/output paths and
+  # portable SHA-256 verification for the map server's pipeline reuse. The
+  # extraction and output bytes are unchanged, but the pinned pipeline input
+  # changed, so the generated-data cache must rebuild.
+  # v4: the graph is imported with tools/gh/MotoGraphImport.java, which adds
+  # per-direction lane guidance (moto_lanes) to edge KV storage.
+  # v5: CurveMaps package/source-path rename changes the geocoder pipeline input.
+  # v6: ride factors. tools/gh/config.yml imports SRTM3 elevation (a 3D graph;
+  # tiles are fetched into data/elevation/srtm, cached with data/) and urban
+  # density, and MotoGraphImport.java stores per-edge stop controls (moto_stops).
+  CACHE_SEED: v6
+
+jobs:
+  light-tier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Gradle daemon runs on JetBrains Runtime 21
+      # (gradle/gradle-daemon-jvm.properties). Gradle would download it via
+      # foojay, whose ids now answer 400, so install it from JetBrains here and
+      # point Gradle's toolchain detection at it. (Locally, Android Studio's
+      # bundled JetBrains Runtime satisfies the same criteria.)
+      - uses: actions/setup-java@v4
+        id: jbr
+        with:
+          distribution: jetbrains
+          java-version: '21'
+      - name: Let Gradle find the JetBrains Runtime
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.paths=${{ steps.jbr.outputs.path }}" >> ~/.gradle/gradle.properties
+
+      # JDK 17 for Gradle/AGP + the GraphHopper import; JDK 21 only for
+      # Planetiler (see tools/tiles/build-tiles.sh). GitHub exposes both as
+      # JAVA_HOME_{17,21}_X64 regardless of which setup-java ran last.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Go builds the Queensland .motomap from the generated components
+      # (`motomap pack`, via tools/package/pack-queensland.sh).
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: tools/motomap/go.mod
+
+      - name: Cache Gradle caches and wrapper
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Restore generated data (OSM extract, graph, tiles, geocoder)
+        id: data-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            data
+            tools/gh/graphhopper-web-${{ env.GRAPHHOPPER_VERSION }}.jar
+            app/src/main/assets/graph-cache
+            app/src/main/assets/geocoder
+          key: offline-${{ runner.os }}-${{ env.CACHE_SEED }}-qld${{ env.OSM_EXTRACT_DATE }}-gh${{ env.GRAPHHOPPER_VERSION }}-${{ hashFiles('tools/gh/config.yml', 'tools/gh/motorcycle.json', 'tools/gh/MotoGraphImport.java', 'tools/tiles/build-tiles.sh', 'geocoder-tool/**') }}
+
+      - name: Download OSM extract and GraphHopper import jar
+        if: steps.data-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p data tools/gh
+          curl -fL --retry 3 --retry-delay 5 \
+            -o data/queensland.osm.pbf \
+            "https://download.geofabrik.de/australia-oceania/australia/queensland-${OSM_EXTRACT_DATE}.osm.pbf"
+          # Verify the download is really a PBF: shallow paths return their
+          # HTML index with HTTP 200 (see AGENTS.md).
+          python3 - <<'PY'
+          import struct
+          with open('data/queensland.osm.pbf', 'rb') as f:
+              prefix = f.read(4)
+              assert len(prefix) == 4, 'truncated PBF length prefix'
+              header_length = struct.unpack('>I', prefix)[0]
+              assert 1 <= header_length <= 64 * 1024, header_length
+              blob_header = f.read(header_length)
+          # The first BlobHeader must identify the required OSMHeader block.
+          # This rejects HTML and arbitrary binary files, not merely files
+          # whose first byte happens to be zero.
+          assert b'OSMHeader' in blob_header, blob_header[:80]
+          print('queensland.osm.pbf has a valid OSMHeader blob')
+          PY
+          curl -fL --retry 3 --retry-delay 5 \
+            -o tools/gh/graphhopper-web-${{ env.GRAPHHOPPER_VERSION }}.jar \
+            https://github.com/graphhopper/graphhopper/releases/download/${{ env.GRAPHHOPPER_VERSION }}/graphhopper-web-${{ env.GRAPHHOPPER_VERSION }}.jar
+      - name: Verify GraphHopper jar checksum
+        run: |
+          echo "${{ env.GRAPHHOPPER_JAR_SHA256 }}  tools/gh/graphhopper-web-${{ env.GRAPHHOPPER_VERSION }}.jar" | sha256sum -c -
+
+
+      - name: Import routing graph (GraphHopper, JDK 17)
+        if: steps.data-cache.outputs.cache-hit != 'true'
+        run: |
+          "$JAVA_HOME_17_X64/bin/java" -Xmx12g -cp "tools/gh/graphhopper-web-${{ env.GRAPHHOPPER_VERSION }}.jar" tools/gh/MotoGraphImport.java import tools/gh/config.yml
+          cp -R data/graph-cache app/src/main/assets/graph-cache
+
+      - name: Build offline vector tiles (Planetiler, JDK 21)
+        if: steps.data-cache.outputs.cache-hit != 'true'
+        run: |
+          TILE_JAVA_HOME="$JAVA_HOME_21_X64" tools/tiles/build-tiles.sh data/queensland.osm.pbf
+
+      - name: Build offline geocoder index
+        if: steps.data-cache.outputs.cache-hit != 'true'
+        run: |
+          JAVA_HOME="$JAVA_HOME_17_X64" ./gradlew :geocoder-tool:run \
+            --args="data/queensland.osm.pbf app/src/main/assets/geocoder"
+
+      - name: Fetch glyph and sprite style assets
+        run: tools/style/fetch-style-assets.sh
+
+      - name: Light CI tier (preflight + JVM suites + assembleDebug)
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          tools/test/ci.sh
+
+      - name: Upload unit-test XML reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-test-results
+          path: |
+            app/build/test-results/**/*.xml
+            geocoder-tool/build/test-results/**/*.xml
+          if-no-files-found: ignore
+
+      - name: Upload preflight log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-failure-log
+          path: build/test-report/
+          if-no-files-found: ignore
+
+  # The Go modules: the .motomap format/pack tool (tools/motomap)
+  # are cheap to verify and must never break silently.
+  go-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: '**/go.mod'
+      - name: tools/motomap vet and test (race detector)
+        working-directory: tools/motomap
+        run: |
+          go vet ./...
+          go test -race ./...

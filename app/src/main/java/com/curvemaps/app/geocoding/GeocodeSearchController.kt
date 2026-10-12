@@ -1,0 +1,71 @@
+package com.curvemaps.app.geocoding
+
+import android.content.Context
+import android.os.SystemClock
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+
+private const val TAG = "CurveMaps.GeocodeCtrl"
+
+/**
+ * Controller for offline place search. The geocoding index (asset copy + mmap)
+ * is loaded lazily on the first search and cached for the app process lifetime;
+ * all searches run on [Dispatchers.IO].
+ *
+ * [geocoderFile] selects an installed regional index; null uses the packaged
+ * Queensland asset (bundled fallback). A dataset switch constructs a new
+ * controller instead of mutating this one, so in-flight searches keep working
+ * against the old index and results can be rejected by generation.
+ */
+class GeocodeSearchController(
+    context: Context,
+    private val geocoderFile: File? = null,
+) : GeocodeController {
+
+    private val appContext = context.applicationContext
+    private val lock = Any()
+
+    @Volatile
+    private var index: GeocoderIndex? = null
+
+    /**
+     * Searches the offline index for [query]. Returns an empty list for blank
+     * queries. The first call can take a few seconds while the index is copied
+     * out of assets and memory-mapped; subsequent calls are fast.
+     */
+    override suspend fun search(query: String, limit: Int): List<GeocodeResult> {
+        if (query.isBlank()) return emptyList()
+        return withContext(Dispatchers.IO) {
+            SearchEngine(getOrLoadIndex()).search(query, limit = limit)
+        }
+    }
+
+    /** Batch reverse-geocodes GPX milestones without network access. */
+    suspend fun reverseGeocode(
+        points: List<Pair<Double, Double>>,
+    ): List<GeocoderIndex.ReverseGeocodeResult?> = withContext(Dispatchers.IO) {
+        getOrLoadIndex().reverseGeocode(points)
+    }
+
+    private fun getOrLoadIndex(): GeocoderIndex = index ?: synchronized(lock) {
+        index ?: run {
+            Log.i(TAG, "First search — loading geocoder index")
+            val started = SystemClock.elapsedRealtime()
+            val loaded = if (geocoderFile != null) {
+                GeocoderIndex.loadFile(geocoderFile)
+            } else {
+                GeocoderIndex.load(appContext)
+            }
+            loaded.also {
+                index = it
+                Log.i(
+                    TAG,
+                    "Geocoder index ready in ${SystemClock.elapsedRealtime() - started} ms: " +
+                        "${it.docCount} docs, ${it.termCount} terms, ${it.localityCount} localities"
+                )
+            }
+        }
+    }
+}

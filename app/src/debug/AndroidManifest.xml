@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug builds may talk to a plain-HTTP loopback/LAN test server when a
+         test opts in (RegionSettings.allowInsecureLocal, private addresses
+         only). The release manifest never enables cleartext. -->
+    <application android:usesCleartextTraffic="true">
+        <receiver
+            android:name=".VisualRouteControlReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.curvemaps.app.DEBUG_VISUAL_ROUTE_FIX" />
+                <action android:name="com.curvemaps.app.DEBUG_VISUAL_CAMERA" />
+                <action android:name="com.curvemaps.app.DEBUG_VISUAL_MAP_PROBE" />
+                <action android:name="com.curvemaps.app.DEBUG_MAP_PERF_SWEEP" />
+                <action android:name="com.curvemaps.app.DEBUG_VISUAL_MAPS_STATE" />
+            </intent-filter>
+        </receiver>
+        <!-- Debug-only synthetic media session used by tools/test/visual.py to
+             screenshot the media control center without a real media app. -->
+        <receiver
+            android:name=".media.VisualMediaSessionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.curvemaps.app.DEBUG_VISUAL_MEDIA_SESSION" />
+            </intent-filter>
+        </receiver>
+        <service android:name=".media.VisualMusicBrowserService" android:exported="true"
+            android:enabled="false" android:label="Debug music player">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+        <!-- The fixture player's media-button receiver (the receiver a stopped
+             Spotify declares): Start's PLAY press without leaving the ride. -->
+        <receiver android:name=".media.VisualMusicButtonReceiver" android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+        <!-- The fixture player's own "play any music" screen (Spotify-style
+             foreground start). Separate process and task so starting it really
+             moves the ride to the background. -->
+        <activity android:name=".media.VisualMusicPlayerActivity" android:exported="true"
+            android:enabled="false" android:process=":player" android:noHistory="true" android:taskAffinity="com.curvemaps.app.player"
+            android:label="Debug music player">
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

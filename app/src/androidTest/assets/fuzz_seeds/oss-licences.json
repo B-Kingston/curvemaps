@@ -1,0 +1,12 @@
+{
+  "seed": 0,
+  "comment": "Deterministic replay for Open-source licences: open it from the settings menu, leave with Back, reopen, open the settings menu above it, close the menu with Back (the list stays), then leave the list. Everything is read from the APK; no network.",
+  "actions": [
+    {"type": "OpenLicences"},
+    {"type": "Back"},
+    {"type": "OpenLicences"},
+    {"type": "ToggleSettings"},
+    {"type": "Back"},
+    {"type": "Back"}
+  ]
+}

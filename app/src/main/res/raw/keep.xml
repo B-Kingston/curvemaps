@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Open-source licences screen reads the AboutLibraries-generated
+     res/raw/aboutlibraries.json by id; keep it if resource shrinking is ever
+     enabled (AGP 9 enables optimized shrinking by default with minify). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/aboutlibraries" />

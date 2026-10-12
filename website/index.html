@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CurveMaps — the best way to navigate on a motorbike</title>
+<meta name="description" content="The best way to navigate on a motorbike. CurveMaps finds the twisty roads, works with no signal, and keeps its controls glove-sized. Offline motorbike navigation for Android.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 68'%3E%3Crect width='68' height='68' rx='17' fill='%230B70C2'/%3E%3Cg transform='translate(7.6 7.6) scale(.8)'%3E%3Cpath d='M6 50 C 14 50 20 50 23 44 C 26 38 20 32 18 26 C 16 18 22 12 28 13 C 35 14 37 21 34 28 C 31 34 35 42 43 41 C 49 40.25 50.5 30.5 54 27' fill='none' stroke='%23fff' stroke-width='5.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath transform='translate(58.6 22.4) rotate(45)' d='M0 -10 L8.5 9 L0 4.5 L-8.5 9Z' fill='%23FF5500' stroke='%23fff' stroke-width='2' stroke-linejoin='round'/%3E%3Ccircle cx='6' cy='50' r='4.6' fill='%230B70C2' stroke='%23fff' stroke-width='3.2'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="theme-color" content="#0C1A29">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #0C1A29;
+    --deep: #0F3154;
+    --blue: #0B70C2;
+    --white: #FFFFFF;
+    --muted: rgba(255,255,255,.72);
+    --rule: rgba(255,255,255,.18);
+    --wrap: 1240px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh; min-height: 100svh;
+    display: flex; flex-direction: column;
+    background: var(--night);
+    color: var(--white);
+    font: 16px/1.5 Overpass, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid #fff; outline-offset: 3px; border-radius: 4px; }
+  .wrap { width: 100%; max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+
+  /* ---------- Topographic background ---------- */
+  .page {
+    position: relative; flex: 1; display: flex; flex-direction: column;
+    overflow: hidden; overflow: clip; /* clip: the full-bleed wash can never scroll the page sideways */
+    background: linear-gradient(200deg, var(--deep) 0%, #0D2440 45%, var(--night) 100%);
+    --phone-w: calc(min(68vh, 700px) * 9 / 19.5);
+  }
+  #topo {
+    position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+    -webkit-mask-image: linear-gradient(100deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.6) 38%, #000 62%);
+            mask-image: linear-gradient(100deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.6) 38%, #000 62%);
+  }
+
+  /* ---------- Nav ---------- */
+  nav.wrap {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding-top: 22px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; letter-spacing: -.01em; text-decoration: none; }
+  .brand svg { width: 32px; height: 32px; }
+
+  /* ---------- Hero ---------- */
+  main { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; }
+  .hero {
+    flex: 1;
+    display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center;
+    padding-top: 20px; padding-bottom: 20px;
+  }
+  .eyebrow { font-size: clamp(16px, 1.35vw, 19px); font-weight: 600; letter-spacing: -.005em; color: var(--muted); margin: 0 0 14px; }
+  h1 {
+    font-size: clamp(46px, 6.4vw, 92px); line-height: .92; letter-spacing: -.035em;
+    margin: 0 0 22px; font-weight: 800; max-width: 9ch;
+  }
+  .lede { font-size: clamp(17px, 1.45vw, 20px); color: var(--muted); max-width: 34ch; margin: 0 0 30px; }
+  /* Not a button: there is nothing to download yet. */
+  .soon {
+    display: inline-flex; align-items: center; gap: 10px;
+    min-height: 48px; padding: 0 22px 0 16px; border-radius: 999px; margin: 0;
+    border: 1px solid var(--rule); color: var(--white);
+    font-weight: 600; font-size: 16px; letter-spacing: -.005em;
+  }
+  .soon svg { width: 22px; height: 22px; flex: none; opacity: .85; }
+  /* Every item carries its dot in the gap before it; the list hides the one starting each line. */
+  .fineprint { display: flex; flex-wrap: wrap; gap: 4px 1.1em; font-size: 14px; color: var(--muted); margin: 18px 0 0; overflow: hidden; }
+  .fineprint span { position: relative; }
+  .fineprint span::before { content: "·"; position: absolute; left: -.75em; }
+
+  /* ---------- Phone ---------- */
+  .phone-stage { display: flex; justify-content: center; align-items: center; }
+  .phone {
+    position: relative;
+    width: var(--phone-w); max-width: 330px;
+    aspect-ratio: 9 / 19.5;
+    padding: calc(var(--phone-w) * .0333);
+    border-radius: calc(var(--phone-w) * .133) / calc(var(--phone-w) * .0615);
+    background: linear-gradient(145deg, #2a2a2e, #111113);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.10),
+      inset 0 0 0 1.5px rgba(255,255,255,.07),
+      0 34px 70px rgba(0,0,0,.55),
+      0 8px 20px rgba(0,0,0,.3);
+    transform: rotate(3deg);
+  }
+  /* Pixel side keys: power above the volume rocker, both on the right edge. */
+  .phone::before, .phone::after {
+    content: ""; position: absolute; right: calc(var(--phone-w) * -.012);
+    width: calc(var(--phone-w) * .016); border-radius: 0 3px 3px 0;
+    background: linear-gradient(90deg, #1a1a1d, #3a3a3f 60%, #232326);
+  }
+  .phone::before { top: 21%; height: 6.5%; }
+  .phone::after { top: 31%; height: 12%; }
+  .screen {
+    position: relative; width: 100%; height: 100%; overflow: hidden;
+    border-radius: calc(var(--phone-w) * .107) / calc(var(--phone-w) * .0508);
+    background: #111113; /* the map covers it */
+    container-type: inline-size;
+    /* One composited surface: otherwise the rotated phone leaves a pale seam of the
+       pitched map along the clipped edge under the dark data bar and media panel. */
+    will-change: transform;
+    touch-action: none; cursor: grab;
+    -webkit-user-select: none; user-select: none;
+  }
+  .screen.panning { cursor: grabbing; }
+  /* The ride camera is pitched, so the map plane tilts away from the rider. */
+  .map3d {
+    position: absolute; left: -110%; width: 320cqw; bottom: 0; height: 1050cqw;
+    transform-origin: 50% 100%;
+    transform: perspective(400cqw) rotateX(50deg);
+  }
+  .chrome { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  /* The map art runs well past the camera frame (x -600..1600, y -2600..4000 map units),
+     so panning and zooming out to about 0.5x never show an edge. */
+  .map3d svg {
+    position: absolute; display: block;
+    left: -60%; width: 220%;
+    top: calc(-2600 / 3280 * 100%); height: calc(6600 / 3280 * 100%);
+  }
+  /* B&W ride map, colours from app/src/main/assets/ride-dark-style.json */
+  .map3d svg *, .chrome .m-places, .chrome .m-moon, .chrome .c-lock { transition: fill .35s, stroke .35s, opacity .35s, stroke-width .35s; }
+  /* Panning releases the rider lock: centre-on-me drops its inverted look (NavigationHud.kt). */
+  .screen.free .c-lock-bg { fill: url(#pill); stroke: rgba(0,0,0,.1); }
+  .screen.free .c-lock-fg { stroke: #1C1C1E; }
+  .screen.free .c-lock-dot { fill: #1C1C1E; }
+  .screen.bw .m-bg { fill: #000; }
+  .screen.bw .m-land, .screen.bw .m-casing, .screen.bw .m-places { opacity: 0; }
+  .screen.bw .m-water { fill: #181818; }
+  .screen.bw .m-creek { opacity: 0; }
+  .screen.bw .m-minor { stroke: #636363; stroke-width: 16; }
+  .screen.bw .m-major { stroke: #8B8B8B; stroke-width: 22; }
+  .screen.bw .m-route { stroke: #FFFFFF; }
+  .screen.bw .m-moon { fill: #1C1C1E; }
+  /* B&W ride mode greys END and whitens the pace delta (NavigationHud.kt); the media panel keeps its blue. */
+  .screen.bw .end-key .key { fill: #E5E5EA; }
+  .screen.bw .end-key text { fill: #1C1C1E; }
+  .screen.bw .pace { fill: #fff; }
+  .bw-toggle, .recenter, .zoom {
+    position: absolute; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* The ride rail paints 48 dp keys inside 64 dp hit boxes (SettingsMenu.kt). */
+  .bw-toggle { left: 84.47%; top: 10.79%; width: 15.53%; height: 6.9%; border-radius: 999px; }
+  .bw-toggle:focus-visible { outline-offset: 1px; border-radius: 999px; }
+  .recenter { left: 86.41%; top: 82.31%; width: 11.65%; height: 5.18%; border-radius: 50%; }
+  .zoom { left: 86.41%; width: 11.65%; height: 5.18%; border-radius: 999px 999px 0 0; }
+  .zoom.in { top: 70.66%; }
+  .zoom.out { top: 75.84%; border-radius: 0 0 999px 999px; }
+  .recenter:focus-visible, .zoom:focus-visible { outline-offset: 1px; }
+
+  /* ---------- Ride media control center (media/MediaControlCenter.kt) ---------- */
+  /* Hit targets sit over the SVG drawing, placed in its 412 x 927 dp space. */
+  .hit {
+    position: absolute; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; border-radius: 999px;
+    left: calc(var(--x) / 412 * 100%); top: calc(var(--y) / 927 * 100%);
+    width: calc(var(--w) / 412 * 100%); height: calc(var(--h) / 927 * 100%);
+  }
+  .hit:disabled { cursor: default; }
+  .mc { position: absolute; inset: 0; pointer-events: none; visibility: hidden; }
+  .mc > * { pointer-events: auto; }
+  .screen.media .mc { visibility: visible; }
+  .mc-sheet { position: absolute; left: 0; right: 0; top: calc(429 / 927 * 100%); bottom: calc(88 / 927 * 100%); cursor: default; }
+  /* The panel covers the map controls while it is open. */
+  .screen.media .zoom, .screen.media .recenter { visibility: hidden; }
+  .chrome .mc-panel {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity .18s ease-out, transform .3s cubic-bezier(.2, .8, .2, 1);
+  }
+  .screen.media .chrome .mc-panel { opacity: 1; transform: none; }
+  /* Open, the bar loses its top corners so panel and bar read as one slab. */
+  .chrome .bar-square, .screen.media .chrome .bar-round { display: none; }
+  .screen.media .chrome .bar-square { display: inline; }
+  /* Soft-lift raised keys (ui/theme/RaisedSurface.kt): the fill never changes. A press,
+     an open panel or a chosen chip only sinks the key 1 dp and swaps its lift for an
+     inner top shade. */
+  .chrome .lit { filter: url(#pill-rest); }
+  .chrome .mc-key { transition: transform .08s; }
+  .chrome .mc-key .key { filter: url(#key-rest); }
+  .chrome .mc-key.pressed, .chrome .mc-chip.selected, .screen.media .chrome .mc-opener { transform: translateY(1px); }
+  .chrome .mc-key.pressed .key, .chrome .mc-chip.selected .key, .screen.media .chrome .mc-opener .key { filter: url(#key-sunk); }
+  .chrome .mc-play .key, .chrome .end-key .key { filter: url(#pill-rest); }
+  .chrome .mc-play.pressed .key { filter: url(#pill-sunk); }
+  .chrome .mc-key.disabled .glyph { opacity: .27; }
+  .chrome .mc-play .pause, .chrome .mc-play.playing .play { display: none; }
+  .chrome .mc-play.playing .pause { display: inline; }
+  .chrome .mc-chip text { fill: #fff; font-weight: 400; }
+  .chrome .mc-chip.selected text { font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) {
+    .chrome .mc-panel, .chrome .mc-key { transition: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .map3d svg *, .chrome .m-places, .chrome .m-moon, .chrome .c-lock { transition: none; }
+  }
+  .chrome text { font-family: Roboto, "Noto Sans", system-ui, sans-serif; }
+
+  /* ---------- Feature list ---------- */
+  /* A faint wash, full-bleed and fading in from above, so the copy reads over the contours. */
+  .features-wrap { position: relative; }
+  .features-wrap::before {
+    content: ""; position: absolute; z-index: -1; pointer-events: none;
+    top: -48px; bottom: -200px; left: -100vw; right: -100vw;
+    background: linear-gradient(to bottom, rgba(12,26,41,0), rgba(12,26,41,.55) 48px);
+  }
+  .features {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    margin: 0 0 18px; padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--rule);
+  }
+  .features li { padding: 16px 18px 4px 0; }
+  .features li + li { padding-left: 18px; border-left: 1px solid var(--rule); }
+  .features b { display: block; font-size: 15px; letter-spacing: -.005em; margin-bottom: 2px; }
+  .features span { display: block; color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+
+  /* ---------- Footer ---------- */
+  footer { position: relative; z-index: 1; flex: none; padding: 12px 0 16px; color: var(--muted); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 4px 24px; justify-content: space-between; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-height: 900px) { .page { --phone-w: calc(min(55vh, 560px) * 9 / 19.5); } }
+  @media (max-height: 820px) {
+    .page { --phone-w: calc(min(50vh, 520px) * 9 / 19.5); }
+    h1 { font-size: clamp(42px, 5.4vw, 76px); margin-bottom: 18px; }
+    .lede { margin-bottom: 24px; }
+    .features li { padding-top: 12px; }
+  }
+  @media (max-height: 720px) { .page { --phone-w: calc(min(44vh, 440px) * 9 / 19.5); } }
+  @media (max-width: 1080px) {
+    .features { grid-template-columns: repeat(3, 1fr); }
+    .features li:nth-child(4) { padding-left: 0; border-left: 0; }
+    .features li:nth-child(n+4) { border-top: 1px solid var(--rule); margin-top: 12px; }
+  }
+  @media (max-width: 900px) {
+    .page { --phone-w: min(64vw, 260px); }
+    .hero { grid-template-columns: 1fr; gap: 40px; padding-top: 28px; }
+    .phone { transform: rotate(2deg); }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding-left: 16px; padding-right: 16px; }
+    nav.wrap { padding-top: 16px; }
+    .features { grid-template-columns: 1fr 1fr; }
+    .features li, .features li + li { padding: 12px 12px 4px 0; border-left: 0; margin-top: 0; border-top: 1px solid var(--rule); }
+    .features li:nth-child(even) { padding-left: 14px; border-left: 1px solid var(--rule); }
+    .features li:nth-child(-n+2) { border-top: 0; }
+    .features li:nth-child(n+4) { margin-top: 0; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .route-draw { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: draw 2.2s .3s ease-out forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <canvas id="topo" aria-hidden="true"></canvas>
+
+  <nav class="wrap" aria-label="Main">
+    <a class="brand" href="#">
+      <!-- Logo: a flowing ride ending in the rider arrow (same mark as the app's launcher icon) -->
+      <svg viewBox="0 0 68 68" aria-hidden="true">
+        <rect width="68" height="68" rx="17" fill="#0B70C2"/>
+        <g transform="translate(7.6 7.6) scale(.8)">
+        <path d="M6 50 C 14 50 20 50 23 44 C 26 38 20 32 18 26 C 16 18 22 12 28 13 C 35 14 37 21 34 28 C 31 34 35 42 43 41 C 49 40.25 50.5 30.5 54 27" fill="none" stroke="#fff" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path transform="translate(58.6 22.4) rotate(45)" d="M0 -10 L8.5 9 L0 4.5 L-8.5 9Z" fill="#FF5500" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="6" cy="50" r="4.6" fill="#0B70C2" stroke="#fff" stroke-width="3.2"/>
+        </g>
+      </svg>
+      CurveMaps
+    </a>
+  </nav>
+
+  <main>
+    <div class="wrap hero">
+      <div class="hero-copy">
+        <p class="eyebrow">The best way to navigate on a motorbike.</p>
+        <h1>Go the twisty way.</h1>
+        <p class="lede">Slide from Fastest to Max twisty and CurveMaps finds a different road for each of seven ride styles. Download your region once and routing, search and the map all run on the phone, so it keeps going where the signal doesn’t.</p>
+        <p class="soon">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+            <path d="M7.2 9.2h9.6a1 1 0 0 1 1 1v6.3a1 1 0 0 1-1 1h-.9v2.6a1.2 1.2 0 0 1-2.4 0v-2.6h-3v2.6a1.2 1.2 0 0 1-2.4 0v-2.6h-.9a1 1 0 0 1-1-1v-6.3a1 1 0 0 1 1-1zM4.6 9.4a1.2 1.2 0 0 1 1.2 1.2v4.6a1.2 1.2 0 0 1-2.4 0v-4.6a1.2 1.2 0 0 1 1.2-1.2zm14.8 0a1.2 1.2 0 0 1 1.2 1.2v4.6a1.2 1.2 0 0 1-2.4 0v-4.6a1.2 1.2 0 0 1 1.2-1.2zM7.3 8.3a4.9 4.9 0 0 1 2.5-3.8L8.9 3a.3.3 0 0 1 .5-.3l1 1.5a5.4 5.4 0 0 1 3.2 0l1-1.5a.3.3 0 0 1 .5.3l-.9 1.5a4.9 4.9 0 0 1 2.5 3.8z"/>
+          </svg>
+          Coming soon to Android
+        </p>
+        <p class="fineprint"><span>No account required</span><span>No tracking</span><span>Android 8.0+</span></p>
+      </div>
+
+      <div class="phone-stage">
+        <div class="phone">
+          <div class="screen" id="screen">
+            <!-- Map plane (OSM Bright colours, as rendered by the app's style.json) -->
+            <div class="map3d" aria-hidden="true">
+              <svg viewBox="-600 -2600 2200 6600" preserveAspectRatio="none">
+                <rect class="m-bg" x="-600" y="-2600" width="2200" height="6600" fill="#F6F3EE"/>
+                <!-- D'Aguilar forest (the B&W ride style draws no landcover) -->
+                <g class="m-land">
+                <path d="M-600 -2600 H360 C420 -2300 330 -1950 380 -1600 C430 -1250 360 -950 410 -620 C430 -470 445 -300 440 -200 C432 -120 428 -60 430 0 C400 300 470 520 400 760 C330 1000 420 1240 360 1500 C300 1760 380 1980 330 2240 C300 2400 160 2440 0 2420 C-80 2412 -150 2440 -200 2430 C-350 2410 -480 2460 -600 2440Z" fill="#D3E8C6"/>
+                <path d="M640 0 C632 -70 640 -140 650 -200 C670 -500 760 -800 740 -1100 C720 -1400 820 -1700 860 -2000 C890 -2250 860 -2450 880 -2600 H1600 V1820 C1450 1790 1300 1830 1200 1760 C1120 1740 1060 1720 1000 1700 C900 1640 860 1460 880 1240 C900 1020 800 900 820 700 C840 480 700 300 640 0Z" fill="#D3E8C6"/>
+                <path d="M60 300 C200 220 320 380 280 560 C240 720 100 700 70 560 C50 460 40 360 60 300Z" fill="#C3E0B2"/>
+                <path d="M120 1100 C220 1060 300 1180 260 1320 C220 1440 110 1400 90 1290 C80 1200 90 1130 120 1100Z" fill="#C3E0B2"/>
+                <path d="M860 260 C940 240 990 360 960 470 C930 560 850 530 840 430 C835 350 840 290 860 260Z" fill="#C3E0B2"/>
+                <path d="M-420 -2300 C-260 -2380 -100 -2260 -130 -2080 C-160 -1900 -330 -1880 -400 -2000 C-450 -2080 -470 -2240 -420 -2300Z" fill="#C3E0B2"/>
+                <path d="M1150 -1300 C1300 -1360 1450 -1240 1420 -1080 C1390 -930 1220 -940 1170 -1060 C1130 -1150 1110 -1260 1150 -1300Z" fill="#C3E0B2"/>
+                <path d="M1240 420 C1380 380 1500 500 1470 640 C1440 770 1290 760 1250 650 C1220 570 1200 460 1240 420Z" fill="#C3E0B2"/>
+                <path d="M-380 1380 C-240 1340 -140 1460 -170 1600 C-200 1730 -360 1720 -400 1610 C-430 1520 -430 1420 -380 1380Z" fill="#C3E0B2"/>
+                <path d="M620 2600 C720 2560 860 2620 1000 2580 C1080 2560 1140 2590 1200 2580 C1350 2560 1480 2610 1600 2590 V4000 H900 C860 3800 800 3600 790 3420 C780 3350 770 3330 760 3280 C700 3100 600 2980 620 2600Z" fill="#DDEED2"/>
+                <path d="M-600 2780 C-420 2750 -300 2790 -200 2770 C-120 2750 -60 2770 0 2760 C80 2730 180 2790 220 2900 C250 2990 200 3120 120 3160 C60 3190 20 3160 0 3140 C-70 3120 -140 3150 -200 3140 C-350 3170 -480 3130 -600 3160Z" fill="#DDEED2"/>
+                <path d="M-560 3500 C-400 3440 -200 3520 -180 3700 C-160 3880 -380 3960 -520 3900 C-600 3860 -620 3600 -560 3500Z" fill="#DDEED2"/>
+                </g>
+                <!-- Lake, dam and creeks -->
+                <path d="M-600 -1500 C-470 -1560 -330 -1480 -300 -1320 C-270 -1160 -380 -1060 -330 -900 C-290 -760 -420 -640 -600 -680Z" class="m-water" fill="#AAD3EB"/>
+                <path d="M40 1700 C120 1640 270 1660 300 1760 C330 1860 250 1920 170 1910 C110 1905 80 1860 40 1850 C0 1840 0 1730 40 1700Z" class="m-water" fill="#AAD3EB"/>
+                <path d="M-420 -2600 C-380 -2300 -460 -2000 -400 -1800 S -350 -1560 -380 -1480" fill="none" class="m-creek" stroke="#AAD3EB" stroke-width="7"/>
+                <path d="M300 1760 C380 1840 400 1980 460 2060 S 640 2180 660 2320 S 600 2700 680 3000 S 760 3200 800 3280 S 830 3420 840 3480 S 860 3800 900 4000" fill="none" class="m-creek" stroke="#AAD3EB" stroke-width="7"/>
+                <!-- Minor roads: white with a warm casing -->
+                <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <g class="m-casing" stroke="#DCD6CC" stroke-width="20">
+                    <path d="M500 4000 V1900 C500 1600 300 1400 280 1000 C260 600 330 300 300 0 C296 -70 310 -140 304 -200 C290 -500 340 -800 320 -1100 C300 -1400 220 -1700 240 -2000 C255 -2250 200 -2450 210 -2600"/>
+                    <path d="M-600 3000 C-450 2996 -300 3010 -200 3006 C-130 3014 -60 3012 0 3010 C200 2990 380 3040 500 3030 C640 3020 800 3060 1000 3040 C1070 3034 1140 3046 1200 3044 C1350 3040 1480 3060 1600 3052"/>
+                    <path d="M280 1000 C180 980 80 1040 0 1020 C-70 1014 -140 1030 -200 1026 C-320 1022 -420 1080 -600 1070"/>
+                    <path d="M790 1300 C960 1310 1060 1250 1200 1280 C1340 1310 1460 1260 1600 1280"/>
+                    <path d="M240 -1750 C400 -1720 560 -1780 670 -1760 C900 -1690 1100 -1760 1300 -1720 C1420 -1700 1520 -1730 1600 -1720"/>
+                  </g>
+                  <g class="m-minor" stroke="#FFFFFF" stroke-width="13">
+                    <path d="M500 4000 V1900 C500 1600 300 1400 280 1000 C260 600 330 300 300 0 C296 -70 310 -140 304 -200 C290 -500 340 -800 320 -1100 C300 -1400 220 -1700 240 -2000 C255 -2250 200 -2450 210 -2600"/>
+                    <path d="M-600 3000 C-450 2996 -300 3010 -200 3006 C-130 3014 -60 3012 0 3010 C200 2990 380 3040 500 3030 C640 3020 800 3060 1000 3040 C1070 3034 1140 3046 1200 3044 C1350 3040 1480 3060 1600 3052"/>
+                    <path d="M280 1000 C180 980 80 1040 0 1020 C-70 1014 -140 1030 -200 1026 C-320 1022 -420 1080 -600 1070"/>
+                    <path d="M790 1300 C960 1310 1060 1250 1200 1280 C1340 1310 1460 1260 1600 1280"/>
+                    <path d="M240 -1750 C400 -1720 560 -1780 670 -1760 C900 -1690 1100 -1760 1300 -1720 C1420 -1700 1520 -1730 1600 -1720"/>
+                  </g>
+                </g>
+                <!-- Mt Glorious Rd (secondary: yellow with an amber casing) -->
+                <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <g class="m-casing" stroke="#E7C27A" stroke-width="24"><path id="mtg" d="M500 2465 C580 2465 650 2450 665 2380 C680 2300 560 2290 555 2200 C550 2110 700 2120 715 2010 C730 1890 610 1880 600 1770 C590 1660 520 1640 540 1530 C560 1420 780 1450 790 1300 C800 1160 600 1170 560 1060 C520 950 680 900 640 780 C600 660 420 690 440 540 C460 400 720 420 700 260 C690 160 600 120 620 0 C628 -70 668 -130 660 -200 C650 -330 520 -380 530 -520 C540 -660 760 -640 770 -800 C780 -960 600 -980 610 -1140 C620 -1300 800 -1290 790 -1450 C780 -1600 660 -1620 670 -1760 C680 -1900 760 -1960 740 -2100 C720 -2250 640 -2300 650 -2440 C655 -2520 680 -2560 690 -2600"/></g>
+                  <use class="m-major" href="#mtg" stroke="#FCEFA8" stroke-width="16"/>
+                </g>
+                <!-- Route: #FF5500 over a white casing (map/RouteLine.kt) -->
+                <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path id="ride" class="m-casing" d="M500 4000 V2465 C580 2465 650 2450 665 2380 C680 2300 560 2290 555 2200 C550 2110 700 2120 715 2010 C730 1890 610 1880 600 1770 C590 1660 520 1640 540 1530 C560 1420 780 1450 790 1300 C800 1160 600 1170 560 1060 C520 950 680 900 640 780 C600 660 420 690 440 540 C460 400 720 420 700 260 C690 160 600 120 620 0 C628 -70 668 -130 660 -200 C650 -330 520 -380 530 -520 C540 -660 760 -640 770 -800 C780 -960 600 -980 610 -1140 C620 -1300 800 -1290 790 -1450 C780 -1600 660 -1620 670 -1760 C680 -1900 760 -1960 740 -2100 C720 -2250 640 -2300 650 -2440 C655 -2520 680 -2560 690 -2600" stroke="#FFFFFF" stroke-width="22"/>
+                  <path class="route-draw m-route" pathLength="1400" d="M500 4000 V2465 C580 2465 650 2450 665 2380 C680 2300 560 2290 555 2200 C550 2110 700 2120 715 2010 C730 1890 610 1880 600 1770 C590 1660 520 1640 540 1530 C560 1420 780 1450 790 1300 C800 1160 600 1170 560 1060 C520 950 680 900 640 780 C600 660 420 690 440 540 C460 400 720 420 700 260 C690 160 600 120 620 0 C628 -70 668 -130 660 -200 C650 -330 520 -380 530 -520 C540 -660 760 -640 770 -800 C780 -960 600 -980 610 -1140 C620 -1300 800 -1290 790 -1450 C780 -1600 660 -1620 670 -1760 C680 -1900 760 -1960 740 -2100 C720 -2250 640 -2300 650 -2440 C655 -2520 680 -2560 690 -2600" stroke="#FF5500" stroke-width="14"/>
+                </g>
+                <!-- Rider puck -->
+                <g transform="translate(500 2875)">
+                  <path d="M0 -46 L28 34 L0 18 L-28 34Z" fill="#fff"/>
+                  <path d="M0 -38 L22 28 L0 14Z" fill="#1E6FD9"/>
+                  <path d="M0 -38 L-22 28 L0 14Z" fill="#4AA3F5"/>
+                </g>
+              </svg>
+            </div>
+
+            <!-- Screen-space chrome in dp (412 × 927), sizes from NavigationHud.kt / SettingsMenu.kt -->
+            <svg class="chrome" aria-hidden="true" viewBox="0 0 412 927" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <!-- Light map keys: RaisedSurface.LightFill -->
+                <linearGradient id="pill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#F9F9FA"/><stop offset="1" stop-color="#F4F4F6"/>
+                </linearGradient>
+                <filter id="lift" x="-30%" y="-30%" width="160%" height="170%">
+                  <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity=".28"/>
+                </filter>
+                <!-- Graphite ride keys: RaisedSurface.Fill -->
+                <linearGradient id="raised" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#3B3B40"/><stop offset=".45" stop-color="#303035"/><stop offset="1" stop-color="#26262B"/>
+                </linearGradient>
+                <!-- Depth stacks from RaisedSurface.kt: ambient lift, contact shadow, inner top light (rest)
+                     or inner top shade (pressed). Light and coloured keys use the softer Pill stacks. -->
+                <filter id="key-rest" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="2.5"/><feOffset dy="2" result="ab"/>
+                  <feFlood flood-color="#000" flood-opacity=".14"/><feComposite in2="ab" operator="in" result="amb"/>
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="1"/><feOffset dy="1" result="kb"/>
+                  <feFlood flood-color="#000" flood-opacity=".32"/><feComposite in2="kb" operator="in" result="key"/>
+                  <feOffset in="SourceAlpha" dy="1" result="sh"/><feComposite in="SourceAlpha" in2="sh" operator="out" result="rim"/>
+                  <feFlood flood-color="#fff" flood-opacity=".08"/><feComposite in2="rim" operator="in" result="top"/>
+                  <feMerge><feMergeNode in="amb"/><feMergeNode in="key"/><feMergeNode in="SourceGraphic"/><feMergeNode in="top"/></feMerge>
+                </filter>
+                <filter id="key-sunk" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation=".5"/><feOffset dy="1" result="kb"/>
+                  <feFlood flood-color="#000" flood-opacity=".1"/><feComposite in2="kb" operator="in" result="key"/>
+                  <feOffset in="SourceAlpha" dy="1"/><feGaussianBlur stdDeviation="1.5" result="sh"/>
+                  <feComposite in="SourceAlpha" in2="sh" operator="out" result="rim"/>
+                  <feFlood flood-color="#000" flood-opacity=".38"/><feComposite in2="rim" operator="in" result="top"/>
+                  <feMerge><feMergeNode in="key"/><feMergeNode in="SourceGraphic"/><feMergeNode in="top"/></feMerge>
+                </filter>
+                <filter id="pill-rest" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="3.5"/><feOffset dy="3" result="ab"/>
+                  <feFlood flood-color="#000" flood-opacity=".06"/><feComposite in2="ab" operator="in" result="amb"/>
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/><feOffset dy="1" result="kb"/>
+                  <feFlood flood-color="#000" flood-opacity=".15"/><feComposite in2="kb" operator="in" result="key"/>
+                  <feOffset in="SourceAlpha" dy="1" result="sh"/><feComposite in="SourceAlpha" in2="sh" operator="out" result="rim"/>
+                  <feFlood flood-color="#fff" flood-opacity=".9"/><feComposite in2="rim" operator="in" result="top"/>
+                  <feMerge><feMergeNode in="amb"/><feMergeNode in="key"/><feMergeNode in="SourceGraphic"/><feMergeNode in="top"/></feMerge>
+                </filter>
+                <filter id="pill-sunk" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation=".5"/><feOffset dy="1" result="kb"/>
+                  <feFlood flood-color="#000" flood-opacity=".1"/><feComposite in2="kb" operator="in" result="key"/>
+                  <feOffset in="SourceAlpha" dy="1"/><feGaussianBlur stdDeviation="1.25" result="sh"/>
+                  <feComposite in="SourceAlpha" in2="sh" operator="out" result="rim"/>
+                  <feFlood flood-color="#000" flood-opacity=".15"/><feComposite in2="rim" operator="in" result="top"/>
+                  <feMerge><feMergeNode in="key"/><feMergeNode in="SourceGraphic"/><feMergeNode in="top"/></feMerge>
+                </filter>
+                <filter id="panel-lift" x="-10%" y="-10%" width="120%" height="120%">
+                  <feDropShadow dx="0" dy="-2" stdDeviation="6" flood-color="#000" flood-opacity=".35"/>
+                </filter>
+              </defs>
+
+              <!-- Place labels stay upright over the pitched map; data-x/y anchor each one to map units -->
+              <g class="m-places" font-size="13" font-weight="500" fill="#4A4A4A" stroke="#FFFFFF" stroke-width="3" paint-order="stroke" stroke-linejoin="round">
+                <g class="m-label" data-x="349.1" data-y="1934.8" transform="translate(97 302)">
+                  <circle r="3.5" fill="#fff" stroke="#666" stroke-width="1.5"/>
+                  <text x="7" y="4">Mount Glorious</text>
+                </g>
+                <g class="m-label" data-x="335.9" data-y="2426.6" transform="translate(64 452)">
+                  <text font-style="italic" fill="#3E7A3A" font-size="12">D’Aguilar National Park</text>
+                </g>
+                <g class="m-label" data-x="670" data-y="-1760" transform="translate(-99 -99)">
+                  <circle r="3.5" fill="#fff" stroke="#666" stroke-width="1.5"/>
+                  <text x="7" y="4">Jollys Lookout</text>
+                </g>
+                <g class="m-label" data-x="1450" data-y="1268" transform="translate(-99 -99)">
+                  <circle r="3.5" fill="#fff" stroke="#666" stroke-width="1.5"/>
+                  <text x="7" y="4">Mount Nebo</text>
+                </g>
+                <g class="m-label" data-x="1300" data-y="3046" transform="translate(-99 -99)">
+                  <circle r="3.5" fill="#fff" stroke="#666" stroke-width="1.5"/>
+                  <text x="7" y="4">Samford</text>
+                </g>
+                <g class="m-label" data-x="-560" data-y="-1150" transform="translate(-99 -99)">
+                  <text font-style="italic" fill="#3F78A8" font-size="12">Lake Wivenhoe</text>
+                </g>
+              </g>
+
+              <!-- Status bar + punch-hole camera -->
+              <text x="26" y="25" fill="#fff" font-size="14" font-weight="500" stroke="rgba(0,0,0,.25)" stroke-width=".6">7:12</text>
+              <circle cx="206" cy="19" r="7" fill="#050608"/>
+              <circle cx="206" cy="19" r="3" fill="#141a24"/>
+              <circle cx="204.8" cy="17.8" r="1" fill="#3b4a5e"/>
+              <g fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round">
+                <path d="M340 28 L354 14 V28Z" opacity=".55"/>
+              </g>
+              <rect x="364" y="14.5" width="22" height="12" rx="3.5" fill="none" stroke="#fff" stroke-width="1.4" opacity=".9"/>
+              <rect x="366.5" y="17" width="14" height="7" rx="1.5" fill="#fff"/>
+              <rect x="387" y="18" width="2" height="5" rx="1" fill="#fff" opacity=".9"/>
+
+              <!-- Guidance card: 18 dp corners, 16/12 dp padding, 44 dp arrow, 22 sp distance, 26 × 32 dp lanes -->
+              <g filter="url(#lift)">
+                <rect x="12" y="44" width="142" height="168" rx="18" fill="#1C1C1E"/>
+              </g>
+              <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M78 98 V64" stroke="#8E9299" stroke-width="4.5"/>
+                <path d="M78 100 V80 C78 72 82 69 90 69 H98 M92 62 L99 69 L92 76" stroke="#fff" stroke-width="5"/>
+              </g>
+              <text x="83" y="132" text-anchor="middle" fill="#fff" font-size="22" font-weight="700">400 m</text>
+              <text x="83" y="152" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="13" font-weight="500">Mt Glorious Rd</text>
+              <!-- Lane strip: two through lanes dimmed, the right lane recommended -->
+              <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6">
+                <path d="M53 198 V174 M48 179 L53 174 L58 179" stroke="rgba(255,255,255,.35)"/>
+                <path d="M81 198 V174 M76 179 L81 174 L86 179" stroke="rgba(255,255,255,.35)"/>
+                <path d="M107 198 V186 C107 181 109 179 114 179 H117 M113 175 L117 179 L113 183" stroke="#fff"/>
+                <path d="M104 201 H118" stroke="#fff"/>
+              </g>
+              <g stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-dasharray="4 4">
+                <path d="M67 172 V202"/><path d="M95 172 V202"/>
+              </g>
+
+              <!-- Ride rail: voice and B&W map, level with the guidance card; a light raised container
+                   (SettingsMenu.kt) with the app's 24 dp glyphs (NavigationHud.kt) -->
+              <rect class="lit" x="356.5" y="44.5" width="47" height="111" rx="23.5" fill="url(#pill)" stroke="rgba(0,0,0,.1)"/>
+              <g transform="translate(368 56)">
+                <path d="M3 9 H7 L12 5 V19 L7 15 H3Z" fill="#1C1C1E"/>
+                <path d="M15.54 8.46 A5 5 0 0 1 15.54 15.54 M18.36 5.64 A9 9 0 0 1 18.36 18.36" fill="none" stroke="#1C1C1E" stroke-width="1.8" stroke-linecap="round"/>
+              </g>
+              <path class="m-moon" transform="translate(368 120)" d="M15 3 C8 1 2 7 3 14 C4 21 13 24 19 19 C21 17 21 15 21 14 C17 17 11 15 10 10 C9 7 11 4 15 3Z" fill="none" stroke="#1C1C1E" stroke-width="1.8" stroke-linejoin="round"/>
+
+              <!-- Zoom pill and centre-on-me (locked: inverted) -->
+              <rect class="lit" x="356.5" y="655.5" width="47" height="95" rx="23.5" fill="url(#pill)" stroke="rgba(0,0,0,.1)"/>
+              <path d="M357 703 H403" stroke="#E0E2E5" stroke-width="1"/>
+              <path d="M380 670 V688 M371 679 H389 M371 727 H389" stroke="#1C1C1E" stroke-width="2.2" stroke-linecap="round"/>
+              <circle class="lit c-lock c-lock-bg" cx="380" cy="787" r="23.5" fill="#1C1C1E" stroke="rgba(0,0,0,.4)"/>
+              <g class="c-lock c-lock-fg" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+                <circle cx="380" cy="787" r="6"/>
+                <path d="M380 777 V780.5 M380 793.5 V797 M370 787 H373.5 M386.5 787 H390"/>
+              </g>
+              <circle class="c-lock c-lock-dot" cx="380" cy="787" r="2.2" fill="#fff"/>
+
+              <!-- Media control center: full-bleed, fused 6 dp into the bar (media/MediaPanelJoin.kt) -->
+              <g class="mc-panel">
+                <path d="M0 453 A24 24 0 0 1 24 429 H388 A24 24 0 0 1 412 453 V839 H0Z" fill="#1C1C1E" filter="url(#panel-lift)"/>
+                <text id="mc-player" x="14" y="458" font-size="12" font-weight="500" fill="rgba(255,255,255,.7)">Spotify</text>
+                <text id="mc-title" x="14" y="479" font-size="17" font-weight="600" fill="#fff">Switchback Season</text>
+                <text id="mc-artist" x="14" y="496" font-size="11" fill="rgba(255,255,255,.7)">The Apex Club</text>
+                <path id="mc-pie" fill="#fff" d="M314 465 A8 8 0 1 1 313.99 465Z"/>
+                <!-- Round graphite keys for single actions; the play key is brand blue (media/MediaControlCenter.kt) -->
+                <g class="mc-key" data-key="close">
+                  <circle class="key" cx="366" cy="473" r="31.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/>
+                  <g class="glyph" transform="translate(354 461)" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M7 7 L17 17 M17 7 L7 17"/></g>
+                </g>
+                <!-- Transport: 72 dp skips either side of an 88 dp play/pause, 20 dp apart -->
+                <g class="mc-key" data-key="prev">
+                  <circle class="key" cx="106" cy="559" r="35.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/>
+                  <g class="glyph" transform="translate(90 543) scale(1.3333)" fill="#fff" stroke="#fff" stroke-linecap="round"><path d="M17.5 6 L5.5 12 L17.5 18Z" stroke="none"/><path d="M4.6 6 V18" fill="none" stroke-width="2.2"/><path d="M20.8 8 V16" fill="none" stroke-width="1.6" opacity=".35"/></g>
+                </g>
+                <g class="mc-key mc-play playing" data-key="play">
+                  <circle class="key" cx="206" cy="559" r="43.5" fill="#0B70C2" stroke="rgba(0,0,0,.14)"/>
+                  <g class="glyph" transform="translate(186 539) scale(1.6667)" fill="#fff">
+                    <path class="play" d="M8 5.4 L18.6 12 L8 18.6Z"/>
+                    <g class="pause"><rect x="7.5" y="5.5" width="3.6" height="13" rx="1.2"/><rect x="13.4" y="5.5" width="3.6" height="13" rx="1.2"/></g>
+                  </g>
+                </g>
+                <g class="mc-key" data-key="next">
+                  <circle class="key" cx="306" cy="559" r="35.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/>
+                  <g class="glyph" transform="translate(290 543) scale(1.3333)" fill="#fff" stroke="#fff" stroke-linecap="round"><path d="M6.5 6 L18.5 12 L6.5 18Z" stroke="none"/><path d="M19.4 6 V18" fill="none" stroke-width="2.2"/><path d="M3.2 8 V16" fill="none" stroke-width="1.6" opacity=".35"/></g>
+                </g>
+                <!-- Volume: level line, then two graphite pills -->
+                <text x="14" y="635" font-size="12" font-weight="500" fill="rgba(255,255,255,.7)">Media volume</text>
+                <rect x="112" y="629.5" width="238" height="3" rx="1.5" fill="#fff" opacity=".28"/>
+                <rect id="mc-vol-fill" x="112" y="629.5" width="142.8" height="3" rx="1.5" fill="#fff" opacity=".95"/>
+                <text id="mc-vol-text" x="398" y="635" text-anchor="end" font-size="12" font-weight="500" fill="rgba(255,255,255,.7)">9 / 15</text>
+                <g class="mc-key" data-key="vol-down">
+                  <rect class="key" x="14.5" y="651.5" width="185" height="63" rx="31.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/>
+                  <g class="glyph" transform="translate(91 667) scale(1.3333)" fill="#fff" stroke="#fff"><path d="M3.5 9 H7 L11.5 5.5 V18.5 L7 15 H3.5Z" stroke="none"/><g fill="none" stroke-width="1.9" stroke-linecap="round"><path d="M20.39 7.61 A5.5 5.5 0 0 1 20.39 15.39"/><path d="M16.5 12 H21.5"/></g></g>
+                </g>
+                <g class="mc-key" data-key="vol-up">
+                  <rect class="key" x="212.5" y="651.5" width="185" height="63" rx="31.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/>
+                  <g class="glyph" transform="translate(289 667) scale(1.3333)" fill="#fff" stroke="#fff"><path d="M3.5 9 H7 L11.5 5.5 V18.5 L7 15 H3.5Z" stroke="none"/><g fill="none" stroke-width="1.9" stroke-linecap="round"><path d="M20.39 7.61 A5.5 5.5 0 0 1 20.39 15.39"/><path d="M17.5 12 H22.5 M20 9.5 V14.5"/></g></g>
+                </g>
+                <!-- Player chips: graphite pills laid out by text width at runtime; the chosen one is held pressed in -->
+                <g class="mc-key mc-chip selected" data-key="chip0"><rect class="key" x="14.5" y="735.5" width="99" height="63" rx="31.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/><text x="64" y="772" text-anchor="middle" font-size="14">Spotify</text></g>
+                <g class="mc-key mc-chip" data-key="chip1"><rect class="key" x="126.5" y="735.5" width="149" height="63" rx="31.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/><text x="201" y="772" text-anchor="middle" font-size="14">YouTube Music</text></g>
+                <g class="mc-key mc-chip" data-key="chip2"><rect class="key" x="288.5" y="735.5" width="109" height="63" rx="31.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/><text x="343" y="772" text-anchor="middle" font-size="14">Podcasts</text></g>
+                <text id="mc-status" x="14" y="820" font-size="11" fill="#fff">Playing</text>
+              </g>
+
+              <!-- Data bar: 24 dp top corners (square while the media panel is open), media opener far-left, END right -->
+              <path class="bar-round" d="M0 857 A24 24 0 0 1 24 833 H388 A24 24 0 0 1 412 857 V927 H0Z" fill="#1C1C1E"/>
+              <path class="bar-square" d="M0 833 H412 V927 H0Z" fill="#1C1C1E"/>
+              <!-- One 64 dp row: 6 dp under the bar's top edge, 4 dp in from the left, 8 dp from the right -->
+              <!-- Media opener: a 48 dp round graphite key inside its 64 dp touch box, held pressed in
+                   while the panel is open, with the app's outline note (media/MediaIcons.kt) at 24 dp -->
+              <g class="mc-key mc-opener" data-key="opener">
+                <circle class="key" cx="36" cy="871" r="23.5" fill="url(#raised)" stroke="rgba(0,0,0,.4)"/>
+                <g transform="translate(24 859)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <ellipse cx="8.5" cy="17.5" rx="3.6" ry="2.9" transform="rotate(-20 8.5 17.5)"/>
+                  <path d="M11.9 16.3 V3.5 C12.9 6.8 18.6 6.6 17.6 11.8"/>
+                </g>
+              </g>
+              <!-- Speedo readouts: 40 sp speed, hairline, 20 sp trip line, 13 sp arrival + pace -->
+              <text x="96" y="878" text-anchor="middle" fill="#fff" font-size="40" font-weight="700">64</text>
+              <text x="96" y="895" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="11.5" font-weight="500">km/h</text>
+              <rect x="130" y="851" width="1" height="40" fill="#3A3A3C"/>
+              <text x="145" y="868" fill="#fff" font-size="20" font-weight="700">1h 12m <tspan fill="rgba(255,255,255,.72)" font-weight="400">·</tspan> 79 km</text>
+              <text x="145" y="889" font-size="13" font-weight="500" fill="rgba(255,255,255,.72)">Arrive <tspan fill="#fff" font-weight="600">8:24</tspan><tspan class="pace" dx="10" fill="#4CC26A" font-weight="600">&#8722;8 s</tspan></text>
+              <!-- END: a raised red pill, grey in B&W -->
+              <g class="end-key">
+                <rect class="key" x="332.5" y="839.5" width="71" height="63" rx="31.5" fill="#D32F2F" stroke="rgba(0,0,0,.14)"/>
+                <text x="368" y="871" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="15" font-weight="500">END</text>
+              </g>
+              <rect x="152" y="917" width="108" height="4" rx="2" fill="#fff" opacity=".85"/>
+            </svg>
+            <button class="bw-toggle" type="button" aria-pressed="false" aria-label="Black and white ride map" title="Black and white ride map"></button>
+            <button class="hit media-opener" type="button" style="--x:4;--y:839;--w:64;--h:64" aria-label="Media controls" aria-expanded="false" aria-controls="media-center"></button>
+            <div class="mc" id="media-center" role="group" aria-label="Media control center">
+              <div class="mc-sheet"></div>
+              <button class="hit" type="button" data-key="close" style="--x:334;--y:441;--w:64;--h:64" aria-label="Close media controls"></button>
+              <button class="hit" type="button" data-key="prev" style="--x:70;--y:523;--w:72;--h:72" aria-label="Previous track"></button>
+              <button class="hit" type="button" data-key="play" style="--x:162;--y:515;--w:88;--h:88" aria-label="Pause"></button>
+              <button class="hit" type="button" data-key="next" style="--x:270;--y:523;--w:72;--h:72" aria-label="Next track"></button>
+              <button class="hit" type="button" data-key="vol-down" style="--x:14;--y:651;--w:186;--h:64" aria-label="Volume down, Media volume"></button>
+              <button class="hit" type="button" data-key="vol-up" style="--x:212;--y:651;--w:186;--h:64" aria-label="Volume up, Media volume"></button>
+              <button class="hit" type="button" data-key="chip0" style="--x:14;--y:735;--w:100;--h:64" aria-label="Select player Spotify" aria-pressed="true"></button>
+              <button class="hit" type="button" data-key="chip1" style="--x:126;--y:735;--w:150;--h:64" aria-label="Select player YouTube Music" aria-pressed="false"></button>
+              <button class="hit" type="button" data-key="chip2" style="--x:288;--y:735;--w:110;--h:64" aria-label="Select player Podcasts" aria-pressed="false"></button>
+            </div>
+            <button class="zoom in" type="button" aria-label="Zoom in" title="Zoom in"></button>
+            <button class="zoom out" type="button" aria-label="Zoom out" title="Zoom out"></button>
+            <button class="recenter" type="button" aria-label="Centre on rider" title="Centre on rider"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap features-wrap">
+    <ul class="features" aria-label="App features">
+      <li><b>Round trips</b><span>Set a ride time, distance or back-by time and get a loop home.</span></li>
+      <li><b>Mid-ride suggestions</b><span>Spots a twistier road ahead and offers it by voice.</span></li>
+      <li><b>Lane guidance</b><span>Shows which lane to take before the junction.</span></li>
+      <li><b>Offline voice guidance</b><span>Spoken turn-by-turn that ducks your music.</span></li>
+      <li><b>Black &amp; white ride map</b><span>High-contrast night map with solid, thick roads.</span></li>
+      <li><b>Glove-sized music controls</b><span>Play, skip and volume without fiddly gestures.</span></li>
+    </ul>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>© 2026 CurveMaps. Ride safely and obey local road rules.</span>
+      <span>Map data © OpenMapTiles.org © OpenStreetMap contributors</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+document.querySelector('.bw-toggle').addEventListener('click', e => {
+  const on = document.getElementById('screen').classList.toggle('bw');
+  e.currentTarget.setAttribute('aria-pressed', on);
+});
+
+/* Pan and zoom the ride map. The map plane is pitched (perspective 400cqw, rotateX 50deg,
+   pivoting on the screen's bottom centre), so pointers are un-projected onto that plane and
+   the point you grab stays under your finger. Maths runs in chrome dp (412 x 927) and in map
+   units measured from the pivot: x to the right, d ahead of it. Pan and zoom move the SVG's
+   viewBox, never the plane itself, so no part of the plane can swing behind the camera. */
+(() => {
+  const screen = document.getElementById('screen');
+  const phone = screen.closest('.phone');
+  const map = screen.querySelector('.map3d svg');
+  const labels = [...screen.querySelectorAll('.m-label')];
+  const W = 412, H = 927, P = 4 * W;
+  const C = Math.cos(50 * Math.PI / 180), S = Math.sin(50 * Math.PI / 180);
+  const KX = 3.2 * W / 1000, KY = 10.5 * W / 3280;   // dp per map unit (320cqw / 1000, 1050cqw / 3280)
+  const ORIGIN_X = 500, ORIGIN_Y = 3280;              // map units under the pivot
+  const VIEW_HALF = 480, VIEW_DEPTH = 3330;           // visible plane: top-edge half-width and depth
+  const ART_HALF = 1100, ART_BEHIND = 720, ART_AHEAD = 5880; // the drawn art, from the pivot
+  const Z_MIN = 1.01 * Math.max(VIEW_HALF / ART_HALF, VIEW_DEPTH / (ART_AHEAD + ART_BEHIND));
+  const Z_MAX = 3;
+  const RIDER = { x: 0, d: ORIGIN_Y - 2875 };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+  let z = 1, tx = 0, td = 0, anim = 0;
+
+  // Keep the drawn art covering the whole visible plane.
+  function constrain() {
+    z = clamp(z, Z_MIN, Z_MAX);
+    tx = clamp(tx, VIEW_HALF - ART_HALF * z, ART_HALF * z - VIEW_HALF);
+    td = clamp(td, VIEW_DEPTH - ART_AHEAD * z, ART_BEHIND * z);
+  }
+  function render() {
+    // The SVG box spans x -700..700, d -200..3480 of the camera plane; show the art that belongs there.
+    const vx = ORIGIN_X - (ART_HALF + tx) / z, vy = ORIGIN_Y - (ART_AHEAD - td) / z;
+    map.setAttribute('viewBox', [vx, vy, 2 * ART_HALF / z, (ART_AHEAD + ART_BEHIND) / z].map(n => +n.toFixed(2)).join(' '));
+    for (const g of labels) {
+      const d = (z * (ORIGIN_Y - g.dataset.y) + td) * KY, s = P / (P + d * S);
+      g.style.visibility = s > 0 && s < 5 ? '' : 'hidden';   // far behind the camera
+      const x = W / 2 + (z * (g.dataset.x - ORIGIN_X) + tx) * KX * s, y = H - d * C * s;
+      g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+    }
+  }
+  // Chrome dp (relative to the pivot column, from the top) → camera plane.
+  function fromDp(lx, ly) {
+    const D = Math.min(H - ly, .9 * P * C / S);       // stay below the horizon
+    const d = D * P / (P * C - D * S), s = P / (P + d * S);
+    return { x: lx / s / KX, d: d / KY };
+  }
+  function toPlane(e) {
+    const r = screen.getBoundingClientRect(), tr = getComputedStyle(phone).transform;
+    const m = tr === 'none' ? { a: 1, b: 0 } : new DOMMatrixReadOnly(tr);
+    const a = Math.atan2(m.b, m.a), k = W / screen.clientWidth;
+    const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    return fromDp((dx * Math.cos(a) + dy * Math.sin(a)) * k,
+                   H / 2 + (dy * Math.cos(a) - dx * Math.sin(a)) * k);
+  }
+  // Move the map so the map point under camera point m ends up under m2 at zoom z2.
+  function follow(m, m2, z2) {
+    const f = clamp(z2, Z_MIN, Z_MAX) / z;
+    tx = m2.x - f * (m.x - tx);
+    td = m2.d - f * (m.d - td);
+    z *= f;
+    constrain(); render();
+  }
+  function stop() { cancelAnimationFrame(anim); anim = 0; }
+  function animate(step, ms) {
+    stop();
+    if (reduce.matches) { step(1); constrain(); render(); return; }
+    const t0 = performance.now();
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / ms);
+      step(1 - Math.pow(1 - p, 3)); constrain(); render();
+      anim = p < 1 ? requestAnimationFrame(tick) : 0;
+    };
+    anim = requestAnimationFrame(tick);
+  }
+  function zoomAbout(focus, factor) {
+    const z0 = z, x0 = tx, d0 = td, z1 = clamp(z0 * factor, Z_MIN, Z_MAX);
+    animate(p => { z = z0; tx = x0; td = d0; follow(focus, focus, z0 + (z1 - z0) * p); }, 280);
+  }
+  render();   // places the labels that start off-screen
+  const free = () => screen.classList.contains('free');
+  // Locked, the zoom buttons keep the rider in place; free, they zoom about the screen centre.
+  const zoomFocus = () => free() ? fromDp(0, H / 2) : { x: z * RIDER.x + tx, d: z * RIDER.d + td };
+
+  screen.querySelector('.zoom.in').addEventListener('click', () => zoomAbout(zoomFocus(), 1.6));
+  screen.querySelector('.zoom.out').addEventListener('click', () => zoomAbout(zoomFocus(), 1 / 1.6));
+  screen.querySelector('.recenter').addEventListener('click', () => {
+    screen.classList.remove('free');
+    const z0 = z, x0 = tx, d0 = td;
+    animate(p => { z = z0 + (1 - z0) * p; tx = x0 * (1 - p); td = d0 * (1 - p); }, 450);
+  });
+
+  // Drag to pan, two fingers to pinch; a short fling glides on.
+  const pts = new Map();
+  let start, samples = [];
+  const gesture = () => {
+    const ps = [...pts.values()], n = ps.length;
+    return {
+      m: { x: ps.reduce((s, p) => s + p.x, 0) / n, d: ps.reduce((s, p) => s + p.d, 0) / n },
+      dist: n > 1 ? Math.hypot(ps[0].x - ps[1].x, ps[0].d - ps[1].d) : 0,
+    };
+  };
+  screen.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('button, .mc')) return;
+    stop();
+    screen.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, toPlane(e));
+    start = { x: e.clientX, y: e.clientY };
+    samples = [];
+  });
+  screen.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    const before = gesture();
+    pts.set(e.pointerId, toPlane(e));
+    const after = gesture();
+    follow(before.m, after.m, before.dist ? z * after.dist / before.dist : z);
+    if (pts.size > 1 || Math.hypot(e.clientX - start.x, e.clientY - start.y) > 4) {
+      screen.classList.add('free', 'panning');
+    }
+    samples.push({ t: e.timeStamp, x: tx, d: td });
+    while (samples.length > 2 && e.timeStamp - samples[0].t > 100) samples.shift();
+  });
+  const lift = e => {
+    if (!pts.delete(e.pointerId)) return;
+    if (pts.size) { samples = []; return; }
+    screen.classList.remove('panning');
+    const a = samples[0], b = samples[samples.length - 1];
+    if (e.type !== 'pointerup' || reduce.matches || !a || b.t - a.t < 10 || e.timeStamp - b.t > 50) return;
+    let vx = (b.x - a.x) / (b.t - a.t), vd = (b.d - a.d) / (b.t - a.t);
+    const speed = Math.hypot(vx, vd), cap = 2.5;
+    if (speed < .05) return;
+    if (speed > cap) { vx *= cap / speed; vd *= cap / speed; }
+    let prev = performance.now();
+    const glide = now => {
+      const dt = now - prev; prev = now;
+      tx += vx * dt; td += vd * dt;
+      const x = tx, d = td;
+      constrain(); render();
+      if (tx !== x) vx = 0;
+      if (td !== d) vd = 0;
+      const decay = Math.exp(-dt / 280); vx *= decay; vd *= decay;
+      anim = Math.hypot(vx, vd) > .01 ? requestAnimationFrame(glide) : 0;
+    };
+    anim = requestAnimationFrame(glide);
+  };
+  screen.addEventListener('pointerup', lift);
+  screen.addEventListener('pointercancel', lift);
+
+  // Trackpad pinch (ctrl + wheel) and double-click zoom about the pointer; plain wheel still scrolls the page.
+  screen.addEventListener('wheel', e => {
+    if (!e.ctrlKey || e.target.closest('.mc')) return;
+    e.preventDefault(); stop();
+    const f = toPlane(e);
+    follow(f, f, z * Math.exp(-e.deltaY * .01));
+    screen.classList.add('free');
+  }, { passive: false });
+  screen.addEventListener('dblclick', e => {
+    if (e.target.closest('button, .mc')) return;
+    screen.classList.add('free');
+    zoomAbout(toPlane(e), 2);
+  });
+})();
+
+/* Ride media control center, after media/MediaControlCenter.kt: one selected player,
+   transport, volume with a real readback, player chips, and a 15 s inactivity close that
+   any touch or key inside the panel restarts. Playing one player pauses the others. */
+(() => {
+  const screen = document.getElementById('screen');
+  const opener = screen.querySelector('.media-opener');
+  const layer = document.getElementById('media-center');
+  const $ = id => document.getElementById(id);
+  const art = key => screen.querySelector(`.mc-key[data-key="${key}"]`);
+  const hit = key => layer.querySelector(`.hit[data-key="${key}"]`);
+  const players = [
+    { name: 'Spotify', playing: true, i: 0, tracks: [
+      ['Switchback Season', 'The Apex Club'], ['Hairpin Summer', 'Low Gear'], ['Range Road', 'Rosalind Vale']] },
+    { name: 'YouTube Music', playing: false, i: 0, tracks: [
+      ['Ridge Line', 'Northbound Static'], ['Second Gear Sunday', 'The Tarmac Saints'], ['Lean Angle', 'Mira Holt']] },
+    { name: 'Podcasts', playing: false, i: 0, tracks: [
+      ['Ep. 42: Reading a corner', 'Twisty Roads'], ['Ep. 41: Night riding', 'Twisty Roads'], ['Ep. 40: Packing light', 'Twisty Roads']] },
+  ];
+  const VOL_MAX = 15, TIMEOUT = 15000, BAR = 238;
+  let selected = 0, volume = 9, deadline = 0, raf = 0;
+
+  function setEnabled(key, on) {
+    art(key).classList.toggle('disabled', !on);
+    hit(key).disabled = !on;
+  }
+  function render() {
+    const p = players[selected], [title, artist] = p.tracks[p.i];
+    $('mc-player').textContent = p.name;
+    $('mc-title').textContent = title;
+    $('mc-artist').textContent = artist;
+    $('mc-status').textContent = p.playing ? 'Playing' : 'Paused';
+    art('play').classList.toggle('playing', p.playing);
+    hit('play').setAttribute('aria-label', p.playing ? 'Pause' : 'Play');
+    $('mc-vol-fill').setAttribute('width', (BAR * volume / VOL_MAX).toFixed(1));
+    $('mc-vol-text').textContent = `${volume} / ${VOL_MAX}`;
+    setEnabled('vol-down', volume > 0);
+    setEnabled('vol-up', volume < VOL_MAX);
+    players.forEach((_, k) => {
+      art('chip' + k).classList.toggle('selected', k === selected);
+      hit('chip' + k).setAttribute('aria-pressed', k === selected);
+    });
+  }
+  // Chips are pills sized to their label (24 dp padding, 12 dp gaps), like the app's scrolling row.
+  function layoutChips() {
+    let x = 14;
+    players.forEach((_, k) => {
+      const g = art('chip' + k), text = g.querySelector('text');
+      const w = Math.round(text.getComputedTextLength() + 48);
+      // The 1 dp edge is drawn inside the pill, as Compose's border is.
+      g.querySelector('rect').setAttribute('x', x + .5);
+      g.querySelector('rect').setAttribute('width', w - 1);
+      text.setAttribute('x', x + w / 2);
+      hit('chip' + k).style.setProperty('--x', x);
+      hit('chip' + k).style.setProperty('--w', w);
+      x += w + 12;
+    });
+  }
+
+  // Inactivity pie: a white wedge that empties clockwise from 12 o'clock.
+  function pie(f) {
+    const cx = 314, cy = 473, r = 8;
+    if (f >= .999) return `M${cx} ${cy - r} A${r} ${r} 0 1 1 ${cx - .01} ${cy - r}Z`;
+    if (f <= 0) return '';
+    const a = 2 * Math.PI * f, x = cx + r * Math.sin(a), y = cy - r * Math.cos(a);
+    return `M${cx} ${cy} L${cx} ${cy - r} A${r} ${r} 0 ${f > .5 ? 1 : 0} 1 ${x.toFixed(2)} ${y.toFixed(2)}Z`;
+  }
+  const poke = () => { deadline = performance.now() + TIMEOUT; };
+  function tick(now) {
+    const f = (deadline - now) / TIMEOUT;
+    $('mc-pie').setAttribute('d', pie(f));
+    if (f <= 0) { close(); return; }
+    raf = requestAnimationFrame(tick);
+  }
+  function open() {
+    screen.classList.add('media');
+    opener.setAttribute('aria-expanded', 'true');
+    poke(); cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+  }
+  function close() {
+    cancelAnimationFrame(raf);
+    const hadFocus = layer.contains(document.activeElement);
+    screen.classList.remove('media');
+    opener.setAttribute('aria-expanded', 'false');
+    if (hadFocus) opener.focus();
+  }
+  const isOpen = () => screen.classList.contains('media');
+
+  const actions = {
+    close,
+    prev() { const p = players[selected]; p.i = (p.i + p.tracks.length - 1) % p.tracks.length; },
+    next() { const p = players[selected]; p.i = (p.i + 1) % p.tracks.length; },
+    play() {
+      const p = players[selected], start = !p.playing;
+      players.forEach(q => { q.playing = false; });
+      p.playing = start;
+    },
+    'vol-down'() { volume = Math.max(0, volume - 1); },
+    'vol-up'() { volume = Math.min(VOL_MAX, volume + 1); },
+  };
+  players.forEach((_, k) => { actions['chip' + k] = () => { selected = k; }; });
+
+  opener.addEventListener('click', () => (isOpen() ? close() : open()));
+  const openerArt = art('opener'), openerUp = () => openerArt.classList.remove('pressed');
+  opener.addEventListener('pointerdown', () => openerArt.classList.add('pressed'));
+  ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(t => opener.addEventListener(t, openerUp));
+  layer.querySelectorAll('.hit').forEach(b => {
+    const key = b.dataset.key, g = art(key);
+    b.addEventListener('click', () => {
+      poke();
+      actions[key]();
+      if (key !== 'close') render();
+    });
+    const up = () => g.classList.remove('pressed');
+    b.addEventListener('pointerdown', () => { if (!b.disabled) g.classList.add('pressed'); });
+    ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(t => b.addEventListener(t, up));
+  });
+  layer.addEventListener('pointerdown', poke);
+  layer.addEventListener('keydown', poke);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen()) close(); });
+
+  render();
+  layoutChips();
+  document.fonts.ready.then(layoutChips);
+})();
+
+/* Topographic background: contour lines traced (marching squares) through a
+   seeded, domain-warped noise field, so the terrain is the same on every load. */
+(() => {
+  const canvas = document.getElementById('topo');
+  const ctx = canvas.getContext('2d');
+
+  let seed = 1729;
+  const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const SIZE = 256;
+  const lattice = new Float32Array(SIZE * SIZE).map(rand);
+  const smooth = t => t * t * (3 - 2 * t);
+  const noise = (x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const tx = smooth(x - xi), ty = smooth(y - yi);
+    const at = (i, j) => lattice[((j & 255) * SIZE) + (i & 255)];
+    const a = at(xi, yi), b = at(xi + 1, yi), c = at(xi, yi + 1), d = at(xi + 1, yi + 1);
+    return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+  };
+  const fbm = (x, y) => {
+    let sum = 0, amp = .55, freq = 1;
+    for (let o = 0; o < 4; o++) { sum += amp * noise(x * freq, y * freq); amp *= .48; freq *= 2.03; }
+    return sum;
+  };
+  const height = (x, y) => {
+    const wx = fbm(x + 5.2, y + 1.3), wy = fbm(x + 1.7, y + 9.2);
+    return fbm(x + 1.6 * wx, y + 1.6 * wy);
+  };
+
+  function draw() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const cell = 6, nx = Math.ceil(w / cell) + 1, ny = Math.ceil(h / cell) + 1;
+    const scale = 1 / 330;                       // ~330 px per noise unit, independent of viewport
+    const field = new Float32Array(nx * ny);
+    let lo = Infinity, hi = -Infinity;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const v = height(i * cell * scale, j * cell * scale);
+      field[j * nx + i] = v; if (v < lo) lo = v; if (v > hi) hi = v;
+    }
+
+    const step = (hi - lo) / 26;
+    const minor = new Path2D(), index = new Path2D();
+    for (let k = 1; k < 26; k++) {
+      const level = lo + k * step, path = k % 5 === 0 ? index : minor;
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+        const a = field[j * nx + i], b = field[j * nx + i + 1];
+        const c = field[(j + 1) * nx + i + 1], d = field[(j + 1) * nx + i];
+        const code = (a > level) | (b > level) << 1 | (c > level) << 2 | (d > level) << 3;
+        if (code === 0 || code === 15) continue;
+        const x = i * cell, y = j * cell;
+        const top = [x + cell * (level - a) / (b - a), y];
+        const right = [x + cell, y + cell * (level - b) / (c - b)];
+        const bottom = [x + cell * (level - d) / (c - d), y + cell];
+        const left = [x, y + cell * (level - a) / (d - a)];
+        const seg = (p, q) => { path.moveTo(p[0], p[1]); path.lineTo(q[0], q[1]); };
+        switch (code) {
+          case 1: case 14: seg(left, top); break;
+          case 2: case 13: seg(top, right); break;
+          case 3: case 12: seg(left, right); break;
+          case 4: case 11: seg(right, bottom); break;
+          case 6: case 9: seg(top, bottom); break;
+          case 7: case 8: seg(left, bottom); break;
+          case 5: seg(left, top); seg(right, bottom); break;
+          case 10: seg(top, right); seg(left, bottom); break;
+        }
+      }
+    }
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(255,255,255,.26)'; ctx.lineWidth = 1; ctx.stroke(minor);
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1.7; ctx.stroke(index);
+  }
+
+  let pending;
+  const schedule = () => { cancelAnimationFrame(pending); pending = requestAnimationFrame(draw); };
+  new ResizeObserver(schedule).observe(canvas);
+  schedule();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+node_modules/
+# Run output belongs in data/rater/agent-review/ (the defaults); these catch older local runs.
+results*/
+plans*/
+*.log

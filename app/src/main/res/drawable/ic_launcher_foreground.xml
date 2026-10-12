@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher mark: a flowing ride ending in the rider arrow. Same drawing as the
+     website logo (website/index.html), authored on a 68-unit grid centred on
+     (33, 33) and scaled so the start ring and arrow tip stay inside the 66 dp
+     safe circle of every adaptive-icon mask. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.82"
+        android:scaleY="0.82"
+        android:translateX="26.94"
+        android:translateY="26.94">
+        <path
+            android:pathData="M6,50 C14,50 20,50 23,44 C26,38 20,32 18,26 C16,18 22,12 28,13 C35,14 37,21 34,28 C31,34 35,42 43,41 C49,40.25 50.5,30.5 54,27"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="5.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <group
+            android:rotation="45"
+            android:translateX="58.6"
+            android:translateY="22.4">
+            <path
+                android:pathData="M0,-10 L8.5,9 L0,4.5 L-8.5,9Z"
+                android:fillColor="#FF5500"
+                android:strokeColor="#FFFFFF"
+                android:strokeWidth="2"
+                android:strokeLineJoin="round" />
+        </group>
+        <path
+            android:pathData="M1.4,50 a4.6,4.6 0 1,0 9.2,0 a4.6,4.6 0 1,0 -9.2,0Z"
+            android:fillColor="#0B70C2"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3.2" />
+    </group>
+</vector>

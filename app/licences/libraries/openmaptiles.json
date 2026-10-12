@@ -1,0 +1,16 @@
+{
+  "uniqueId": "curvemaps.data:openmaptiles",
+  "name": "OpenMapTiles schema and style",
+  "description": "Vector tile schema and map style the offline map is built with. © OpenMapTiles.org. Design under CC BY 4.0, code under the BSD 3-Clause License.",
+  "website": "https://openmaptiles.org",
+  "developers": [
+    {
+      "name": "MapTiler.com & OpenMapTiles contributors"
+    }
+  ],
+  "licenses": [
+    "CC-BY-4.0",
+    "BSD-3-Clause"
+  ],
+  "tag": "data"
+}

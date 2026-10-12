@@ -1,0 +1,18 @@
+{
+  "seed": 0,
+  "comment": "Deterministic replay of the actions the seeded campaign can now reach: route settings, the avoid-motorways and block-unpaved toggles, then the media panel's transport and volume.",
+  "actions": [
+    {"type": "OpenRouteSettings"},
+    {"type": "ToggleAvoidMotorways"},
+    {"type": "ToggleBlockUnpaved"},
+    {"type": "ApplyRouteSettings"},
+    {"type": "Back"},
+    {"type": "StartRide"},
+    {"type": "ToggleMediaPanel"},
+    {"type": "PressMedia", "command": "PLAY"},
+    {"type": "PressMedia", "command": "NEXT"},
+    {"type": "AdjustVolume", "increase": true},
+    {"type": "AdjustVolume", "increase": false},
+    {"type": "Back"}
+  ]
+}
