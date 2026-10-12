@@ -10,10 +10,9 @@ and notification access from the previous app are not transferred automatically.
 The app makes **zero runtime network calls** for routing, search and map
 rendering. The distributed APK carries only the style, glyphs and sprites; the
 map itself is **one `.motomap` file** (basemap tiles + routing graph + place
-search) that you load once with **Load map file**. Releases ship `curvemaps.apk`
-and `queensland.motomap`. (Debug builds still bundle Queensland's graph and
-geocoder by default so the test tiers work; `-Pmoto.bundleData=false` builds
-the map-less APK.)
+search) that you download in the app or load once with **Load map file**.
+(Debug builds still bundle Queensland's graph and geocoder by default so the
+test tiers work; `-Pmoto.bundleData=false` builds the map-less APK.)
 
 ## Features
 
@@ -988,8 +987,8 @@ tools/package/pack-queensland.sh            # writes data/package/queensland.mot
 - CurveMaps is source-available under the
   [PolyForm Shield License 1.0.0](LICENSE). You may read, build, change and
   use it for any purpose except providing a product that competes with
-  CurveMaps, free or paid. The official app is published by the project owner
-  on Google Play. The name, logo and icon are not licensed
+  CurveMaps, free or paid. Only the project owner publishes the app (Google
+  Play is planned); there are no free public builds. The name, logo and icon are not licensed
   ([TRADEMARKS.md](TRADEMARKS.md)). Contributions need the CLA
   ([CONTRIBUTING.md](CONTRIBUTING.md)).
   Third-party components and their licences: [THIRD_PARTY.md](THIRD_PARTY.md).

@@ -3,9 +3,9 @@
 Offline-first motorcycle routing app: Kotlin + Compose + MapLibre (map) +
 GraphHopper (routing). Source-available under the PolyForm Shield License
 1.0.0 (`LICENSE`; name and logo in `TRADEMARKS.md`, contributions need
-`CLA.md`, third-party notices in `THIRD_PARTY.md`). The official app ships on
-Google Play under the owner's terms, never as a free public APK. Never
-commit secrets.
+`CLA.md`, third-party notices in `THIRD_PARTY.md`). Only the owner publishes
+the app, under the owner's terms (Google Play is planned), never as a free
+public APK. Never commit secrets.
 
 ## Topic docs: read before touching the area
 
