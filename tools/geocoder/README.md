@@ -39,7 +39,7 @@ stay unindexed, as before.
 2. Build & run (working dir = repo root; output dir is created if missing):
 
 ```
-JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew :geocoder-tool:run --args="/Users/bailee/Downloads/queensland-260812.osm.pbf app/src/main/assets/geocoder"
+JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew :geocoder-tool:run --args="~/Downloads/queensland-260812.osm.pbf app/src/main/assets/geocoder"
 ```
 
 The tool writes `app/src/main/assets/geocoder/geocoder.dat` **atomically** (a
@@ -58,7 +58,7 @@ or >2 GiB index fails the build instead of producing a corrupt file.
 3. Verify with `--inspect` (first arg is the PBF path, currently unused):
 
 ```
-JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew :geocoder-tool:run --args="--inspect /Users/bailee/Downloads/queensland-260812.osm.pbf app/src/main/assets/geocoder/geocoder.dat brisbane ann cafe fuel qld"
+JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew :geocoder-tool:run --args="--inspect ~/Downloads/queensland-260812.osm.pbf app/src/main/assets/geocoder/geocoder.dat brisbane ann cafe fuel qld"
 ```
 
 4. **Certify the binary format** with `--validate` (full structural check —
