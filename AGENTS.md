@@ -7,6 +7,10 @@ GraphHopper (routing). Source-available under the PolyForm Shield License
 the app, under the owner's terms (Google Play is planned), never as a free
 public APK. Never commit secrets.
 
+Owner-only operations (the hosted map service, test builds) live in the
+private `B-Kingston/curvemaps-server` repository; its `AGENTS.md` is their
+runbook.
+
 ## Topic docs: read before touching the area
 
 This file holds what every task needs. Details live in `docs/agents/`:

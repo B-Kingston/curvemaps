@@ -13,14 +13,16 @@ geocoder index. Format and pack/verify tool: `tools/motomap`
   Brisbane); anything else Geofabrik publishes builds on request up to the
   size cap.
 - **The service runs this repo's pipeline** (`tools/tiles`, `tools/gh/*`,
-  `:geocoder-tool`, `tools/motomap` via `go.mod` replace), and its fingerprints
-  hash those inputs (`pack.ToolHashes`).
+  `:geocoder-tool`) and imports `tools/motomap` as a Go module pinned to a
+  commit of this repo. Its fingerprints hash the pipeline inputs
+  (`pack.ToolHashes`).
   - A pipeline input change: commit with the `CACHE_SEED` bump, then redeploy
-    the service.
+    the service from its repository.
     Every curated package rebuilds over the next nights and riders
     see **Update** (a full re-download each), so do not change inputs casually.
-  - A `tools/motomap` schema change ships in the app no later than the server
-    produces it (the importer rejects unknown fields).
+  - A `tools/motomap` change reaches the server only when its `go.mod` pin
+    moves. A schema change ships in the app no later than the server produces
+    it (the importer rejects unknown fields).
   - A weighting/profile change makes older packages unloadable: rebuild the
     hosted set before releasing such an app.
 - **Paid-access hooks (no billing yet):** catalog entries carry `tier`

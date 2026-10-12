@@ -54,4 +54,5 @@ checks every manifest claim.
 ## Licence
 
 Part of CurveMaps (PolyForm Shield License 1.0.0; see `LICENSE` at the
-repository root). The hosted map service uses this module to build packages.
+repository root). The hosted map service imports this module, pinned to a
+commit, to build packages.

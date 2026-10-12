@@ -7,11 +7,8 @@ app is published by the project owner.
 
 ## How changes land
 
-The public repository, `B-Kingston/curvemaps`, is published from the owner's
-development tree. Pull requests are welcome there. An accepted pull request is
-applied upstream with you as its author, then comes back to the public
-repository with the next sync. The pull request itself is closed rather than
-merged.
+Open pull requests against `main`. CI runs the light test tier on each one,
+and an accepted pull request is merged.
 
 ## Contributor licence agreement (required)
 
